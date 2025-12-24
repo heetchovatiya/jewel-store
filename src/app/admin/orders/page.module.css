@@ -1,0 +1,163 @@
+.ordersPage {
+    padding: var(--space-xl) var(--space-2xl);
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.loadingPage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xl);
+}
+
+.header h1 {
+    font-size: 2rem;
+}
+
+.table {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.tableHeader {
+    display: grid;
+    grid-template-columns: 1fr 0.8fr 1fr 0.6fr 0.8fr 0.8fr 0.6fr;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tableRow {
+    display: grid;
+    grid-template-columns: 1fr 0.8fr 1fr 0.6fr 0.8fr 0.8fr 0.6fr;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tableRow:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.orderNumber {
+    font-weight: 600;
+}
+
+.total {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.empty {
+    padding: var(--space-2xl);
+    text-align: center;
+    color: var(--text-muted);
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: var(--space-lg);
+}
+
+.modalContent {
+    background: var(--secondary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xl);
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modalContent h2 {
+    margin-bottom: var(--space-lg);
+}
+
+.orderDetails {
+    margin-bottom: var(--space-lg);
+}
+
+.detailSection {
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.detailSection h3 {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: var(--space-sm);
+}
+
+.detailSection p {
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+}
+
+.orderItem {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-sm) 0;
+    font-size: 0.9rem;
+}
+
+.orderTotal {
+    display: flex;
+    justify-content: space-between;
+    padding-top: var(--space-md);
+    margin-top: var(--space-md);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.statusButtons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+@media (max-width: 1024px) {
+    .ordersPage {
+        padding: var(--space-md);
+    }
+
+    .tableHeader,
+    .tableRow {
+        grid-template-columns: 1fr 0.8fr 0.6fr 0.8fr 0.6fr;
+    }
+
+    .tableHeader span:nth-child(3),
+    .tableHeader span:nth-child(4),
+    .tableRow span:nth-child(3),
+    .tableRow span:nth-child(4) {
+        display: none;
+    }
+}
