@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
+import { uploadImage, validateImageFile } from '@/lib/upload';
 import styles from './page.module.css';
 
 interface Category {
@@ -27,6 +28,11 @@ export default function AdminCategoriesPage() {
     const [message, setMessage] = useState({ type: '', text: '' });
     const [showAddModal, setShowAddModal] = useState(false);
     const [newCategory, setNewCategory] = useState({ name: '', image: '' });
+
+    // Upload state
+    const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
+    const [uploadError, setUploadError] = useState('');
+    const categoryImageInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (!authLoading && !isAdmin) {
@@ -114,6 +120,29 @@ export default function AdminCategoriesPage() {
             setMessage({ type: 'error', text: err.message || 'Failed to save categories' });
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleCategoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const validation = validateImageFile(file);
+        if (!validation.valid) {
+            setUploadError(validation.error || 'Invalid file');
+            return;
+        }
+
+        setUploadError('');
+        setUploadingCategoryImage(true);
+        try {
+            const url = await uploadImage(file, { folder: 'categories' });
+            setNewCategory({ ...newCategory, image: url });
+        } catch (err: any) {
+            setUploadError(err.message || 'Failed to upload image');
+        } finally {
+            setUploadingCategoryImage(false);
+            if (categoryImageInputRef.current) categoryImageInputRef.current.value = '';
         }
     };
 
@@ -268,14 +297,40 @@ export default function AdminCategoriesPage() {
                             )}
                         </div>
                         <div className={styles.formGroup}>
-                            <label className="label">Category Image URL (Optional)</label>
-                            <input
-                                type="url"
-                                className="input"
-                                value={newCategory.image}
-                                onChange={(e) => setNewCategory({ ...newCategory, image: e.target.value })}
-                                placeholder="https://jewelstore.sgp1.digitaloceanspaces.com/categories/{slug}.jpg"
-                            />
+                            <label className="label">Category Image (Optional)</label>
+                            {uploadError && <p className={styles.uploadError}>{uploadError}</p>}
+                            <div className={styles.imageUploadWrapper}>
+                                <input
+                                    type="url"
+                                    className="input"
+                                    value={newCategory.image}
+                                    onChange={(e) => setNewCategory({ ...newCategory, image: e.target.value })}
+                                    placeholder="Enter URL or upload image"
+                                />
+                                <label className={`${styles.uploadBtn} ${uploadingCategoryImage ? styles.uploading : ''}`}>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        ref={categoryImageInputRef}
+                                        onChange={handleCategoryImageUpload}
+                                        disabled={uploadingCategoryImage}
+                                        style={{ display: 'none' }}
+                                    />
+                                    {uploadingCategoryImage ? '⏳ Uploading...' : '📁 Upload'}
+                                </label>
+                            </div>
+                            {newCategory.image && (
+                                <div className={styles.imagePreview}>
+                                    <img src={newCategory.image} alt="Preview" />
+                                    <button
+                                        type="button"
+                                        className={styles.removeImageBtn}
+                                        onClick={() => setNewCategory({ ...newCategory, image: '' })}
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            )}
                         </div>
                         <div className={styles.modalActions}>
                             <button className="btn btn-ghost" onClick={() => setShowAddModal(false)}>

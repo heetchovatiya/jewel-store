@@ -291,3 +291,19 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Image Upload Wrapper */
+.imageUploadWrapper {
+    display: flex;
+    gap: var(--space-sm);
+    align-items: stretch;
+}
+
+.imageUploadWrapper input[type="text"] {
+    flex: 1;
+}
+
+.uploadBtn.uploading {
+    opacity: 0.7;
+    pointer-events: none;
+}

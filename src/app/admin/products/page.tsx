@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
+import { uploadImage, validateImageFile } from '@/lib/upload';
 import styles from './page.module.css';
 
 interface Category {
@@ -35,6 +36,10 @@ export default function AdminProductsPage() {
         isFeatured: false,
     });
     const [error, setError] = useState('');
+
+    // Upload states
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const productImageInputRef = useRef<HTMLInputElement>(null);
 
     // Get categories from store config ONLY (no fallbacks)
     const categories: Category[] = (config?.categories || []).sort((a: Category, b: Category) => a.order - b.order);
@@ -138,6 +143,31 @@ export default function AdminProductsPage() {
             fetchData();
         } catch (err) {
             console.error('Failed to delete product:', err);
+        }
+    };
+
+    const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const validation = validateImageFile(file);
+        if (!validation.valid) {
+            setError(validation.error || 'Invalid file');
+            return;
+        }
+
+        setUploadingImage(true);
+        try {
+            const url = await uploadImage(file, { folder: 'products' });
+            // Append to existing images
+            const currentImages = formData.images ? formData.images.split(',').map(s => s.trim()).filter(Boolean) : [];
+            currentImages.push(url);
+            setFormData({ ...formData, images: currentImages.join(', ') });
+        } catch (err: any) {
+            setError(err.message || 'Failed to upload image');
+        } finally {
+            setUploadingImage(false);
+            if (productImageInputRef.current) productImageInputRef.current.value = '';
         }
     };
 
@@ -325,15 +355,28 @@ export default function AdminProductsPage() {
                                 </div>
                             </div>
                             <div className={styles.formGroup}>
-                                <label className="label">Image URLs (comma-separated)</label>
-                                <input
-                                    type="text"
-                                    className="input"
-                                    value={formData.images}
-                                    onChange={(e) => setFormData({ ...formData, images: e.target.value })}
-                                    placeholder="https://jewelstore.sgp1.digitaloceanspaces.com/products/{slug}/main.jpg"
-                                />
-                                <span className={styles.hint}>Use DO Spaces: /products/{'{product-slug}'}/image.jpg — Add multiple URLs separated by commas</span>
+                                <label className="label">Product Images</label>
+                                <div className={styles.imageUploadWrapper}>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        value={formData.images}
+                                        onChange={(e) => setFormData({ ...formData, images: e.target.value })}
+                                        placeholder="Image URLs (comma-separated) or upload below"
+                                    />
+                                    <label className={`${styles.uploadBtn} ${uploadingImage ? styles.uploading : ''}`}>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            ref={productImageInputRef}
+                                            onChange={handleProductImageUpload}
+                                            disabled={uploadingImage}
+                                            style={{ display: 'none' }}
+                                        />
+                                        {uploadingImage ? '⏳ Uploading...' : '📁 Upload Image'}
+                                    </label>
+                                </div>
+                                <span className={styles.hint}>Upload images or enter URLs separated by commas</span>
                             </div>
                             <div className={styles.formGroup}>
                                 <label className={styles.checkboxLabel}>
