@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ProductCard from '@/components/ProductCard';
 import api from '@/lib/api';
 import styles from './page.module.css';
 
-export default function ProductsPage() {
+function ProductsContent() {
     const searchParams = useSearchParams();
     const categoryParam = searchParams.get('category');
     const searchParam = searchParams.get('search');
@@ -153,5 +153,21 @@ export default function ProductsPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function ProductsPage() {
+    return (
+        <Suspense fallback={
+            <div className={styles.productsPage}>
+                <div className="container">
+                    <div className={styles.loading}>
+                        <div className="spinner" />
+                    </div>
+                </div>
+            </div>
+        }>
+            <ProductsContent />
+        </Suspense>
     );
 }
