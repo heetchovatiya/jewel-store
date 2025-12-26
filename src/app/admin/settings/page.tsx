@@ -177,7 +177,7 @@ export default function AdminSettingsPage() {
                                 className="input"
                                 value={config.logoUrl}
                                 onChange={(e) => setConfig({ ...config, logoUrl: e.target.value })}
-                                placeholder="https://..."
+                                placeholder="https://jewelstore.sgp1.digitaloceanspaces.com/branding/logo.png"
                             />
                         </div>
                     </div>
@@ -270,7 +270,7 @@ export default function AdminSettingsPage() {
                                             className="input"
                                             value={newAboutImage}
                                             onChange={(e) => setNewAboutImage(e.target.value)}
-                                            placeholder="Enter image URL..."
+                                            placeholder="https://jewelstore.sgp1.digitaloceanspaces.com/about/story.jpg"
                                         />
                                         <button type="button" className="btn btn-secondary" onClick={addAboutImage}>
                                             Add Image
@@ -335,7 +335,7 @@ export default function AdminSettingsPage() {
                             className="input"
                             value={newBanner}
                             onChange={(e) => setNewBanner(e.target.value)}
-                            placeholder="Enter banner image URL..."
+                            placeholder="https://jewelstore.sgp1.digitaloceanspaces.com/banners/hero.jpg"
                         />
                         <button type="button" className="btn btn-secondary" onClick={addBanner}>
                             Add Banner

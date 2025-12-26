@@ -274,7 +274,7 @@ export default function AdminCategoriesPage() {
                                 className="input"
                                 value={newCategory.image}
                                 onChange={(e) => setNewCategory({ ...newCategory, image: e.target.value })}
-                                placeholder="https://..."
+                                placeholder="https://jewelstore.sgp1.digitaloceanspaces.com/categories/{slug}.jpg"
                             />
                         </div>
                         <div className={styles.modalActions}>

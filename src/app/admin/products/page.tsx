@@ -331,9 +331,9 @@ export default function AdminProductsPage() {
                                     className="input"
                                     value={formData.images}
                                     onChange={(e) => setFormData({ ...formData, images: e.target.value })}
-                                    placeholder="https://image1.jpg, https://image2.jpg"
+                                    placeholder="https://jewelstore.sgp1.digitaloceanspaces.com/products/{slug}/main.jpg"
                                 />
-                                <span className={styles.hint}>Add multiple image URLs separated by commas</span>
+                                <span className={styles.hint}>Use DO Spaces: /products/{'{product-slug}'}/image.jpg — Add multiple URLs separated by commas</span>
                             </div>
                             <div className={styles.formGroup}>
                                 <label className={styles.checkboxLabel}>
