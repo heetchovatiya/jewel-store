@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
+import { uploadImage, validateImageFile } from '@/lib/upload';
 import styles from './page.module.css';
 
 export default function AdminSettingsPage() {
@@ -36,6 +37,17 @@ export default function AdminSettingsPage() {
     const [message, setMessage] = useState('');
     const [newBanner, setNewBanner] = useState('');
     const [newAboutImage, setNewAboutImage] = useState('');
+
+    // Upload states
+    const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [uploadingBanner, setUploadingBanner] = useState(false);
+    const [uploadingAbout, setUploadingAbout] = useState(false);
+    const [uploadError, setUploadError] = useState('');
+
+    // File input refs
+    const logoInputRef = useRef<HTMLInputElement>(null);
+    const bannerInputRef = useRef<HTMLInputElement>(null);
+    const aboutInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (!authLoading && !isAdmin) {
@@ -136,6 +148,85 @@ export default function AdminSettingsPage() {
         });
     };
 
+    // File upload handlers
+    const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const validation = validateImageFile(file);
+        if (!validation.valid) {
+            setUploadError(validation.error || 'Invalid file');
+            return;
+        }
+
+        setUploadError('');
+        setUploadingLogo(true);
+        try {
+            const url = await uploadImage(file, { folder: 'logos' });
+            setConfig({ ...config, logoUrl: url });
+        } catch (err: any) {
+            setUploadError(err.message || 'Failed to upload logo');
+        } finally {
+            setUploadingLogo(false);
+            if (logoInputRef.current) logoInputRef.current.value = '';
+        }
+    };
+
+    const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const validation = validateImageFile(file);
+        if (!validation.valid) {
+            setUploadError(validation.error || 'Invalid file');
+            return;
+        }
+
+        setUploadError('');
+        setUploadingBanner(true);
+        try {
+            const url = await uploadImage(file, { folder: 'banners' });
+            setConfig({
+                ...config,
+                heroBanners: [...config.heroBanners, url],
+            });
+        } catch (err: any) {
+            setUploadError(err.message || 'Failed to upload banner');
+        } finally {
+            setUploadingBanner(false);
+            if (bannerInputRef.current) bannerInputRef.current.value = '';
+        }
+    };
+
+    const handleAboutImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || config.aboutUs.images.length >= 2) return;
+
+        const validation = validateImageFile(file);
+        if (!validation.valid) {
+            setUploadError(validation.error || 'Invalid file');
+            return;
+        }
+
+        setUploadError('');
+        setUploadingAbout(true);
+        try {
+            const url = await uploadImage(file, { folder: 'about' });
+            setConfig({
+                ...config,
+                aboutUs: {
+                    ...config.aboutUs,
+                    images: [...config.aboutUs.images, url],
+                },
+            });
+        } catch (err: any) {
+            setUploadError(err.message || 'Failed to upload image');
+        } finally {
+            setUploadingAbout(false);
+            if (aboutInputRef.current) aboutInputRef.current.value = '';
+        }
+    };
+
     if (authLoading || loading) {
         return (
             <div className={styles.loadingPage}>
@@ -171,14 +262,40 @@ export default function AdminSettingsPage() {
                             />
                         </div>
                         <div className={styles.formGroup}>
-                            <label className="label">Logo URL</label>
-                            <input
-                                type="url"
-                                className="input"
-                                value={config.logoUrl}
-                                onChange={(e) => setConfig({ ...config, logoUrl: e.target.value })}
-                                placeholder="https://jewelstore.sgp1.digitaloceanspaces.com/branding/logo.png"
-                            />
+                            <label className="label">Logo</label>
+                            <div className={styles.fileUploadWrapper}>
+                                {config.logoUrl && (
+                                    <div className={styles.logoPreview}>
+                                        <img src={config.logoUrl} alt="Logo" />
+                                        <button
+                                            type="button"
+                                            className={styles.clearBtn}
+                                            onClick={() => setConfig({ ...config, logoUrl: '' })}
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                )}
+                                <div className={styles.fileUploadRow}>
+                                    <input
+                                        type="url"
+                                        className="input"
+                                        value={config.logoUrl}
+                                        onChange={(e) => setConfig({ ...config, logoUrl: e.target.value })}
+                                        placeholder="Enter URL or upload file"
+                                    />
+                                    <label className={`${styles.fileUploadBtn} ${uploadingLogo ? styles.uploading : ''}`}>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            ref={logoInputRef}
+                                            onChange={handleLogoUpload}
+                                            disabled={uploadingLogo}
+                                        />
+                                        {uploadingLogo ? '⏳ Uploading...' : '📁 Upload'}
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div className={styles.formGroup}>
@@ -264,17 +381,29 @@ export default function AdminSettingsPage() {
                                 </div>
 
                                 {config.aboutUs.images.length < 2 && (
-                                    <div className={styles.addBanner}>
-                                        <input
-                                            type="url"
-                                            className="input"
-                                            value={newAboutImage}
-                                            onChange={(e) => setNewAboutImage(e.target.value)}
-                                            placeholder="https://jewelstore.sgp1.digitaloceanspaces.com/about/story.jpg"
-                                        />
-                                        <button type="button" className="btn btn-secondary" onClick={addAboutImage}>
-                                            Add Image
-                                        </button>
+                                    <div className={styles.fileUploadWrapper}>
+                                        <div className={styles.fileUploadRow}>
+                                            <input
+                                                type="url"
+                                                className="input"
+                                                value={newAboutImage}
+                                                onChange={(e) => setNewAboutImage(e.target.value)}
+                                                placeholder="Enter image URL"
+                                            />
+                                            <button type="button" className="btn btn-secondary" onClick={addAboutImage}>
+                                                Add URL
+                                            </button>
+                                            <label className={`${styles.fileUploadBtn} ${uploadingAbout ? styles.uploading : ''}`}>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    ref={aboutInputRef}
+                                                    onChange={handleAboutImageUpload}
+                                                    disabled={uploadingAbout}
+                                                />
+                                                {uploadingAbout ? '⏳ Uploading...' : '📁 Upload'}
+                                            </label>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -329,17 +458,30 @@ export default function AdminSettingsPage() {
                         )}
                     </div>
 
-                    <div className={styles.addBanner}>
-                        <input
-                            type="url"
-                            className="input"
-                            value={newBanner}
-                            onChange={(e) => setNewBanner(e.target.value)}
-                            placeholder="https://jewelstore.sgp1.digitaloceanspaces.com/banners/hero.jpg"
-                        />
-                        <button type="button" className="btn btn-secondary" onClick={addBanner}>
-                            Add Banner
-                        </button>
+                    <div className={styles.fileUploadWrapper}>
+                        {uploadError && <p className={styles.uploadError}>{uploadError}</p>}
+                        <div className={styles.fileUploadRow}>
+                            <input
+                                type="url"
+                                className="input"
+                                value={newBanner}
+                                onChange={(e) => setNewBanner(e.target.value)}
+                                placeholder="Enter banner URL"
+                            />
+                            <button type="button" className="btn btn-secondary" onClick={addBanner}>
+                                Add URL
+                            </button>
+                            <label className={`${styles.fileUploadBtn} ${uploadingBanner ? styles.uploading : ''}`}>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    ref={bannerInputRef}
+                                    onChange={handleBannerUpload}
+                                    disabled={uploadingBanner}
+                                />
+                                {uploadingBanner ? '⏳ Uploading...' : '📁 Upload'}
+                            </label>
+                        </div>
                     </div>
                 </section>
 
