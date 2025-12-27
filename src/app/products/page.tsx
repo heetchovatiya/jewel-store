@@ -1,12 +1,13 @@
 'use client';
 
-import React, { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React, { Suspense, useEffect, useState, useRef, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import ProductCard from '@/components/ProductCard';
 import api from '@/lib/api';
 import styles from './page.module.css';
 
 function ProductsContent() {
+    const router = useRouter();
     const searchParams = useSearchParams();
     const categoryParam = searchParams.get('category');
     const searchParam = searchParams.get('search');
@@ -14,12 +15,16 @@ function ProductsContent() {
     const [products, setProducts] = useState<any[]>([]);
     const [categories, setCategories] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || '');
     const [searchQuery, setSearchQuery] = useState(searchParam || '');
     const [debouncedSearch, setDebouncedSearch] = useState(searchParam || '');
     const [sortBy, setSortBy] = useState('-createdAt');
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
+    const [isMobile, setIsMobile] = useState(false);
+    const observerRef = useRef<IntersectionObserver | null>(null);
+    const loadMoreRef = useRef<HTMLDivElement>(null);
     const limit = 12;
 
     // Sync URL params with state when they change (e.g., from navbar search)
@@ -62,22 +67,86 @@ function ProductsContent() {
         }
     };
 
-    const fetchProducts = async () => {
-        setLoading(true);
+    const fetchProducts = async (loadMore = false) => {
+        if (loadMore) {
+            setLoadingMore(true);
+        } else {
+            setLoading(true);
+        }
         try {
             const params: any = { page, limit, sort: sortBy };
             if (selectedCategory) params.category = selectedCategory;
             if (debouncedSearch) params.search = debouncedSearch;
 
             const res = await api.getProducts(params);
-            setProducts(res.products);
+
+            if (loadMore && isMobile) {
+                // Append products for infinite scroll
+                setProducts(prev => [...prev, ...res.products]);
+            } else {
+                setProducts(res.products);
+            }
             setTotal(res.total);
         } catch (err) {
             console.error('Failed to fetch products:', err);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
         }
     };
+
+    // Clear all filters and search
+    const clearFilters = () => {
+        setSearchQuery('');
+        setDebouncedSearch('');
+        setSelectedCategory('');
+        setSortBy('-createdAt');
+        setPage(1);
+        setProducts([]);
+        // Also clear URL params
+        router.push('/products');
+    };
+
+    // Check if any filters are active
+    const hasActiveFilters = debouncedSearch || selectedCategory || sortBy !== '-createdAt';
+
+    // Check if mobile on mount and resize
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    // Infinite scroll observer for mobile
+    useEffect(() => {
+        if (!isMobile || loading || loadingMore) return;
+
+        const hasMore = products.length < total;
+        if (!hasMore) return;
+
+        observerRef.current = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && !loadingMore && hasMore) {
+                    setPage(p => p + 1);
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRef.current) {
+            observerRef.current.observe(loadMoreRef.current);
+        }
+
+        return () => observerRef.current?.disconnect();
+    }, [isMobile, loading, loadingMore, products.length, total]);
+
+    // When page changes on mobile, load more products
+    useEffect(() => {
+        if (isMobile && page > 1) {
+            fetchProducts(true);
+        }
+    }, [page]);
 
     const totalPages = Math.ceil(total / limit);
 
@@ -130,6 +199,20 @@ function ProductsContent() {
                         <option value="-price">Price: High to Low</option>
                         <option value="title">Name: A-Z</option>
                     </select>
+
+                    {/* Clear Filters Button */}
+                    {hasActiveFilters && (
+                        <button
+                            onClick={clearFilters}
+                            className={`btn btn-ghost ${styles.clearBtn}`}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                            Clear
+                        </button>
+                    )}
                 </div>
 
                 {loading ? (
@@ -152,10 +235,14 @@ function ProductsContent() {
                             ))}
                         </div>
 
-                        {totalPages > 1 && (
+                        {/* Desktop Pagination */}
+                        {!isMobile && totalPages > 1 && (
                             <div className={styles.pagination}>
                                 <button
-                                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                    onClick={() => {
+                                        setPage((p) => Math.max(1, p - 1));
+                                        setProducts([]);
+                                    }}
                                     disabled={page === 1}
                                     className="btn btn-ghost"
                                 >
@@ -165,12 +252,33 @@ function ProductsContent() {
                                     Page {page} of {totalPages}
                                 </span>
                                 <button
-                                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                    onClick={() => {
+                                        setPage((p) => Math.min(totalPages, p + 1));
+                                        setProducts([]);
+                                    }}
                                     disabled={page === totalPages}
                                     className="btn btn-ghost"
                                 >
                                     Next
                                 </button>
+                            </div>
+                        )}
+
+                        {/* Mobile Infinite Scroll Trigger */}
+                        {isMobile && products.length < total && (
+                            <div ref={loadMoreRef} className={styles.loadMore}>
+                                {loadingMore ? (
+                                    <div className="spinner" />
+                                ) : (
+                                    <span>Scroll for more...</span>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Mobile: Show loaded count */}
+                        {isMobile && products.length >= total && total > limit && (
+                            <div className={styles.allLoaded}>
+                                All {total} products loaded
                             </div>
                         )}
                     </>

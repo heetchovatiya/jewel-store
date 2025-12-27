@@ -84,6 +84,33 @@
     color: var(--text-muted);
 }
 
+.clearBtn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--error);
+    border-color: var(--error);
+}
+
+.clearBtn:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.loadMore {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--space-xl);
+    color: var(--text-muted);
+}
+
+.allLoaded {
+    text-align: center;
+    padding: var(--space-lg);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
 @media (max-width: 768px) {
     .controls {
         flex-direction: column;
