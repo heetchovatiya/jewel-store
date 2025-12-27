@@ -315,3 +315,44 @@
         font-size: 0.8rem;
     }
 }
+
+@media (max-width: 320px) {
+    .container {
+        padding: var(--space-md) 6px;
+        padding-top: 80px;
+    }
+
+    .header h1 {
+        font-size: 1.5rem;
+    }
+
+    .subtitle {
+        font-size: 0.9rem;
+    }
+
+    .card {
+        padding: var(--space-sm);
+    }
+
+    .cardHeader h2 {
+        font-size: 1rem;
+    }
+
+    .quickLinkIcon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .quickLinkTitle {
+        font-size: 0.85rem;
+    }
+
+    .quickLinkDesc {
+        font-size: 0.75rem;
+    }
+
+    .editBtn {
+        font-size: 0.8rem;
+        padding: 6px 10px;
+    }
+}

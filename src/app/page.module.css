@@ -492,3 +492,51 @@
     font-size: 1rem;
   }
 }
+
+@media (max-width: 320px) {
+
+  .features,
+  .categoriesSection,
+  .productsSection,
+  .testimonials,
+  .cta {
+    padding: var(--space-xl) 0;
+  }
+
+  .sectionTitle {
+    font-size: 1.25rem;
+  }
+
+  .feature {
+    padding: var(--space-sm);
+  }
+
+  .featureIcon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .feature h3 {
+    font-size: 0.95rem;
+  }
+
+  .feature p {
+    font-size: 0.85rem;
+  }
+
+  .ctaContent h2 {
+    font-size: 1.25rem;
+  }
+
+  .ctaContent p {
+    font-size: 0.9rem;
+  }
+
+  .categoryName {
+    font-size: 1rem;
+  }
+
+  .aboutText p {
+    font-size: 0.9rem;
+  }
+}

@@ -299,3 +299,36 @@
         min-width: 40px;
     }
 }
+
+@media (max-width: 320px) {
+    .title {
+        font-size: 1.25rem;
+    }
+
+    .price {
+        font-size: 1.1rem;
+    }
+
+    .comparePrice {
+        font-size: 0.9rem;
+    }
+
+    .description {
+        font-size: 0.85rem;
+    }
+
+    .quantity button {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+    }
+
+    .quantity span {
+        min-width: 36px;
+        font-size: 0.9rem;
+    }
+
+    .category {
+        font-size: 0.75rem;
+    }
+}

@@ -256,3 +256,51 @@
         padding: var(--space-md);
     }
 }
+
+@media (max-width: 320px) {
+    .title {
+        font-size: 1.25rem;
+    }
+
+    .cartItem {
+        grid-template-columns: 56px 1fr;
+        padding: var(--space-sm);
+        gap: 6px;
+    }
+
+    .itemImage {
+        width: 56px;
+        height: 56px;
+    }
+
+    .itemDetails h3 {
+        font-size: 0.85rem;
+    }
+
+    .itemPrice {
+        font-size: 0.8rem;
+    }
+
+    .itemQuantity button {
+        width: 28px;
+        height: 28px;
+        font-size: 0.85rem;
+    }
+
+    .itemQuantity span {
+        min-width: 28px;
+        font-size: 0.85rem;
+    }
+
+    .itemTotal {
+        font-size: 0.95rem;
+    }
+
+    .cartSummary {
+        padding: var(--space-sm);
+    }
+
+    .cartSummary h3 {
+        font-size: 1.1rem;
+    }
+}

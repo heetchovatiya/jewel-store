@@ -213,3 +213,36 @@
         font-size: 1.1rem;
     }
 }
+
+@media (max-width: 320px) {
+    .title {
+        font-size: 1.25rem;
+    }
+
+    .addressForm,
+    .orderSummary {
+        padding: var(--space-sm);
+    }
+
+    .addressForm h2,
+    .orderSummary h2 {
+        font-size: 1.1rem;
+    }
+
+    .summaryItem img {
+        width: 36px;
+        height: 36px;
+    }
+
+    .itemName {
+        font-size: 0.8rem;
+    }
+
+    .itemQty {
+        font-size: 0.7rem;
+    }
+
+    .grandTotal {
+        font-size: 1rem;
+    }
+}

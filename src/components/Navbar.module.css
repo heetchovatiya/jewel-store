@@ -431,3 +431,45 @@
         padding: var(--space-sm);
     }
 }
+
+@media (max-width: 320px) {
+    .navContent {
+        height: 56px;
+        padding: 0 6px;
+        gap: var(--space-sm);
+    }
+
+    .logoImg {
+        height: 28px;
+    }
+
+    .logoText {
+        font-size: 1.1rem;
+    }
+
+    .cartBtn,
+    .userBtn,
+    .mobileToggle {
+        width: 32px;
+        height: 32px;
+    }
+
+    .cartBadge {
+        min-width: 16px;
+        height: 16px;
+        font-size: 0.65rem;
+    }
+
+    .mobileLink {
+        padding: 6px 10px;
+        font-size: 0.9rem;
+    }
+
+    .mobileMenu {
+        padding: 6px;
+    }
+
+    .mobileCategoryTitle {
+        font-size: 0.7rem;
+    }
+}
