@@ -1,7 +1,6 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-interface PresignedUrlResponse {
-    uploadUrl: string;
+interface UploadResponse {
     publicUrl: string;
     key: string;
 }
@@ -12,7 +11,8 @@ interface UploadOptions {
 }
 
 /**
- * Upload a file to Digital Ocean Spaces via presigned URL
+ * Upload a file to Digital Ocean Spaces via backend proxy
+ * This approach avoids CORS issues by having the backend handle the S3 upload
  * @param file - The file to upload
  * @param options - Upload options including folder and progress callback
  * @returns The public URL of the uploaded file
@@ -28,45 +28,29 @@ export async function uploadImage(
         throw new Error('Authentication required');
     }
 
-    // Step 1: Get presigned URL from backend
-    const presignedResponse = await fetch(`${API_BASE}/admin/upload/presigned-url`, {
+    // Create FormData for multipart upload
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', options.folder);
+
+    // Upload file to backend which proxies to DO Spaces
+    const response = await fetch(`${API_BASE}/admin/upload/file`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
             'x-tenant-id': tenantId,
+            // Note: Don't set Content-Type for FormData, browser will set it with boundary
         },
-        body: JSON.stringify({
-            folder: options.folder,
-            filename: file.name,
-            contentType: file.type,
-        }),
+        body: formData,
     });
 
-    if (!presignedResponse.ok) {
-        const error = await presignedResponse.json().catch(() => ({ message: 'Failed to get upload URL' }));
-        throw new Error(error.message || 'Failed to get upload URL');
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to upload file' }));
+        console.error('Upload failed:', response.status, error);
+        throw new Error(error.message || 'Failed to upload file');
     }
 
-    const { uploadUrl, publicUrl }: PresignedUrlResponse = await presignedResponse.json();
-
-    // Step 2: Upload file directly to DO Spaces using presigned URL
-    // The bucket should be configured with public file access at bucket level
-    const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': file.type,
-        },
-        body: file,
-    });
-
-    // S3-compatible PUT responses return 200 OK on success
-    // Some may also return 204 No Content
-    if (!uploadResponse.ok) {
-        console.error('Upload failed:', uploadResponse.status, uploadResponse.statusText);
-        throw new Error(`Failed to upload file to storage (${uploadResponse.status})`);
-    }
-
+    const { publicUrl }: UploadResponse = await response.json();
     console.log('Upload successful, public URL:', publicUrl);
     return publicUrl;
 }
