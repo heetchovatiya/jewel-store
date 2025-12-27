@@ -25,14 +25,16 @@ export default function AdminProductsPage() {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editProduct, setEditProduct] = useState<any>(null);
+    const [loadingInventory, setLoadingInventory] = useState(false);
     const [formData, setFormData] = useState({
         title: '',
         description: '',
         price: 0,
         category: '',
-        images: '',
+        images: [] as string[],
         stock: 0,
         sku: '',
+        lowStockThreshold: 5,
         isFeatured: false,
     });
     const [error, setError] = useState('');
@@ -68,20 +70,43 @@ export default function AdminProductsPage() {
         }
     };
 
-    const openModal = (product?: any) => {
+    const openModal = async (product?: any) => {
         setError('');
         if (product) {
             setEditProduct(product);
-            setFormData({
-                title: product.title,
-                description: product.description || '',
-                price: product.price,
-                category: product.category,
-                images: product.images?.join(', ') || '',
-                stock: 0,
-                sku: '',
-                isFeatured: product.isFeatured || false,
-            });
+            setLoadingInventory(true);
+
+            // Fetch product with inventory data
+            try {
+                const productWithInventory = await api.getProductWithInventory(product._id);
+                setFormData({
+                    title: productWithInventory.title,
+                    description: productWithInventory.description || '',
+                    price: productWithInventory.price,
+                    category: productWithInventory.category,
+                    images: Array.isArray(productWithInventory.images) ? productWithInventory.images : [],
+                    stock: productWithInventory.inventory?.stock || 0,
+                    sku: productWithInventory.inventory?.sku || '',
+                    lowStockThreshold: productWithInventory.inventory?.lowStockThreshold || 5,
+                    isFeatured: productWithInventory.isFeatured || false,
+                });
+            } catch (err) {
+                console.error('Failed to fetch inventory:', err);
+                // Fallback to product data only
+                setFormData({
+                    title: product.title,
+                    description: product.description || '',
+                    price: product.price,
+                    category: product.category,
+                    images: Array.isArray(product.images) ? product.images : [],
+                    stock: 0,
+                    sku: '',
+                    lowStockThreshold: 5,
+                    isFeatured: product.isFeatured || false,
+                });
+            } finally {
+                setLoadingInventory(false);
+            }
         } else {
             setEditProduct(null);
             setFormData({
@@ -89,9 +114,10 @@ export default function AdminProductsPage() {
                 description: '',
                 price: 0,
                 category: categories[0]?.slug || '',
-                images: '',
+                images: [],
                 stock: 10,
                 sku: '',
+                lowStockThreshold: 5,
                 isFeatured: false,
             });
         }
@@ -108,15 +134,33 @@ export default function AdminProductsPage() {
         }
 
         try {
-            const data = {
-                ...formData,
-                images: formData.images.split(',').map((s) => s.trim()).filter(Boolean),
+            const productData = {
+                title: formData.title,
+                description: formData.description,
+                price: formData.price,
+                category: formData.category,
+                images: formData.images, // Already an array
+                isFeatured: formData.isFeatured,
             };
 
             if (editProduct) {
-                await api.updateProduct(editProduct._id, data);
+                // Update product
+                await api.updateProduct(editProduct._id, productData);
+
+                // Update inventory
+                await api.updateInventory(editProduct._id, {
+                    stock: formData.stock,
+                    sku: formData.sku,
+                    lowStockThreshold: formData.lowStockThreshold,
+                });
             } else {
-                await api.createProduct(data);
+                // Create new product with initial inventory
+                await api.createProduct({
+                    ...productData,
+                    stock: formData.stock,
+                    sku: formData.sku,
+                    lowStockThreshold: formData.lowStockThreshold,
+                });
             }
 
             fetchData();
@@ -169,18 +213,23 @@ export default function AdminProductsPage() {
         setError('');
         try {
             const url = await uploadImage(file, { folder: 'products' });
-            // Use functional setState to avoid stale closure issue
-            setFormData(prev => {
-                const currentImages = prev.images ? prev.images.split(',').map(s => s.trim()).filter(Boolean) : [];
-                currentImages.push(url);
-                return { ...prev, images: currentImages.join(', ') };
-            });
+            setFormData(prev => ({
+                ...prev,
+                images: [...prev.images, url],
+            }));
         } catch (err: any) {
             setError(err.message || 'Failed to upload image');
         } finally {
             setUploadingImage(false);
             if (productImageInputRef.current) productImageInputRef.current.value = '';
         }
+    };
+
+    const removeImage = (index: number) => {
+        setFormData(prev => ({
+            ...prev,
+            images: prev.images.filter((_, i) => i !== index),
+        }));
     };
 
     if (authLoading || loading) {
@@ -368,15 +417,21 @@ export default function AdminProductsPage() {
                             </div>
                             <div className={styles.formGroup}>
                                 <label className="label">Product Images</label>
-                                <div className={styles.imageUploadWrapper}>
-                                    <input
-                                        type="text"
-                                        className="input"
-                                        value={formData.images}
-                                        onChange={(e) => setFormData({ ...formData, images: e.target.value })}
-                                        placeholder="Image URLs (comma-separated) or upload below"
-                                    />
-                                    <label className={`${styles.uploadBtn} ${uploadingImage ? styles.uploading : ''}`}>
+                                <div className={styles.imageGallery}>
+                                    {formData.images.map((url, index) => (
+                                        <div key={index} className={styles.imageThumb}>
+                                            <img src={url} alt={`Product ${index + 1}`} />
+                                            <button
+                                                type="button"
+                                                className={styles.removeImageBtn}
+                                                onClick={() => removeImage(index)}
+                                                title="Remove image"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <label className={`${styles.uploadPlaceholder} ${uploadingImage ? styles.disabled : ''}`}>
                                         <input
                                             type="file"
                                             accept="image/*"
@@ -385,10 +440,19 @@ export default function AdminProductsPage() {
                                             disabled={uploadingImage}
                                             style={{ display: 'none' }}
                                         />
-                                        {uploadingImage ? '⏳ Uploading...' : '📁 Upload Image'}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                        <span>{uploadingImage ? 'Uploading...' : 'Upload'}</span>
                                     </label>
                                 </div>
-                                <span className={styles.hint}>Upload images or enter URLs separated by commas</span>
+                                {formData.images.length > 0 && (
+                                    <span className={styles.imageCount}>
+                                        {formData.images.length} image{formData.images.length !== 1 ? 's' : ''} • Click image to remove
+                                    </span>
+                                )}
                             </div>
                             <div className={styles.formGroup}>
                                 <label className={styles.checkboxLabel}>
@@ -401,29 +465,48 @@ export default function AdminProductsPage() {
                                 </label>
                                 <span className={styles.hint}>Featured products appear on the homepage</span>
                             </div>
-                            {!editProduct && (
-                                <div className={styles.formRow}>
+
+                            {/* Inventory Section */}
+                            {loadingInventory ? (
+                                <div className={styles.loadingInventory}>
+                                    Loading inventory data...
+                                </div>
+                            ) : (
+                                <>
+                                    <div className={styles.formRow}>
+                                        <div className={styles.formGroup}>
+                                            <label className="label">{editProduct ? 'Current Stock' : 'Initial Stock'}</label>
+                                            <input
+                                                type="number"
+                                                className="input"
+                                                min={0}
+                                                value={formData.stock}
+                                                onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                                            />
+                                        </div>
+                                        <div className={styles.formGroup}>
+                                            <label className="label">SKU {!editProduct && '(optional)'}</label>
+                                            <input
+                                                type="text"
+                                                className="input"
+                                                value={formData.sku}
+                                                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                                                placeholder="Auto-generated if empty"
+                                            />
+                                        </div>
+                                    </div>
                                     <div className={styles.formGroup}>
-                                        <label className="label">Initial Stock</label>
+                                        <label className="label">Low Stock Alert Threshold</label>
                                         <input
                                             type="number"
                                             className="input"
                                             min={0}
-                                            value={formData.stock}
-                                            onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                                            value={formData.lowStockThreshold}
+                                            onChange={(e) => setFormData({ ...formData, lowStockThreshold: parseInt(e.target.value) || 5 })}
                                         />
+                                        <span className={styles.hint}>Get notified when stock falls below this number</span>
                                     </div>
-                                    <div className={styles.formGroup}>
-                                        <label className="label">SKU (optional)</label>
-                                        <input
-                                            type="text"
-                                            className="input"
-                                            value={formData.sku}
-                                            onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                                            placeholder="Auto-generated if empty"
-                                        />
-                                    </div>
-                                </div>
+                                </>
                             )}
                             <div className={styles.modalActions}>
                                 <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}>

@@ -187,6 +187,10 @@ class ApiClient {
         return this.request<any>(`/admin/products/${id}`, { method: 'PATCH', body: data });
     }
 
+    async getProductWithInventory(id: string) {
+        return this.request<any>(`/admin/products/${id}/with-inventory`);
+    }
+
     async deleteProduct(id: string) {
         return this.request<any>(`/admin/products/${id}`, { method: 'DELETE' });
     }
