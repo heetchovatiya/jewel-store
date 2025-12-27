@@ -64,7 +64,7 @@ export function isFullUrl(url: string): boolean {
 /**
  * Get the full image URL, handling both full URLs and relative paths
  */
-export function resolveImageUrl(url: string, fallback: string = '/placeholder-jewelry.jpg'): string {
+export function resolveImageUrl(url: string, fallback: string = '/placeholder-jewelry.svg'): string {
     if (!url) return fallback;
     if (isFullUrl(url)) return url;
     return getStorageUrl(url);

@@ -325,7 +325,7 @@ export default function AdminProductsPage() {
                                 <span className={styles.featuredBadge}>★ Featured</span>
                             )}
                             <div className={styles.productImage}>
-                                <img src={product.images?.[0] || '/placeholder-jewelry.jpg'} alt={product.title} />
+                                <img src={product.images?.[0] || '/placeholder-jewelry.svg'} alt={product.title} />
                             </div>
                             <div className={styles.productInfo}>
                                 <h3>{product.title}</h3>

@@ -48,7 +48,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <Link href={`/products/${product.slug}`} className={styles.card}>
             <div className={styles.imageWrapper}>
                 <img
-                    src={product.images?.[0] || '/placeholder-jewelry.jpg'}
+                    src={product.images?.[0] || '/placeholder-jewelry.svg'}
                     alt={product.title}
                     className={styles.image}
                 />

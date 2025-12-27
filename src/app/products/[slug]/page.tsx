@@ -87,7 +87,7 @@ export default function ProductDetailPage() {
                     <div className={styles.gallery}>
                         <div className={styles.mainImage}>
                             <img
-                                src={product.images?.[selectedImage] || '/placeholder-jewelry.jpg'}
+                                src={product.images?.[selectedImage] || '/placeholder-jewelry.svg'}
                                 alt={product.title}
                             />
                         </div>

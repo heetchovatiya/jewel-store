@@ -190,7 +190,7 @@ export default function CheckoutPage() {
                         <div className={styles.items}>
                             {items.map((item) => (
                                 <div key={item.productId} className={styles.summaryItem}>
-                                    <img src={item.image || '/placeholder-jewelry.jpg'} alt={item.title} />
+                                    <img src={item.image || '/placeholder-jewelry.svg'} alt={item.title} />
                                     <div className={styles.itemInfo}>
                                         <span className={styles.itemName}>{item.title}</span>
                                         <span className={styles.itemQty}>Qty: {item.quantity}</span>
