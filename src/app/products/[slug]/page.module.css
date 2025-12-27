@@ -268,3 +268,34 @@
         flex-direction: column;
     }
 }
+
+@media (max-width: 375px) {
+    .productPage {
+        padding: var(--space-md) 0 var(--space-2xl);
+    }
+
+    .title {
+        font-size: 1.5rem;
+    }
+
+    .price {
+        font-size: 1.25rem;
+    }
+
+    .comparePrice {
+        font-size: 1rem;
+    }
+
+    .description {
+        font-size: 0.9rem;
+    }
+
+    .quantity button {
+        width: 40px;
+        height: 40px;
+    }
+
+    .quantity span {
+        min-width: 40px;
+    }
+}

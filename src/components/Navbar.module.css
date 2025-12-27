@@ -401,3 +401,33 @@
         display: none;
     }
 }
+
+@media (max-width: 375px) {
+    .navContent {
+        height: 64px;
+        padding: 0 var(--space-sm);
+    }
+
+    .logoImg {
+        height: 32px;
+    }
+
+    .logoText {
+        font-size: 1.25rem;
+    }
+
+    .cartBtn,
+    .userBtn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .mobileLink {
+        padding: var(--space-sm) var(--space-md);
+        font-size: 0.95rem;
+    }
+
+    .mobileMenu {
+        padding: var(--space-sm);
+    }
+}

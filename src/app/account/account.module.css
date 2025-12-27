@@ -279,3 +279,39 @@
         grid-template-columns: 1fr;
     }
 }
+
+@media (max-width: 375px) {
+    .container {
+        padding: var(--space-lg) var(--space-sm);
+        padding-top: 90px;
+    }
+
+    .header h1 {
+        font-size: 1.75rem;
+    }
+
+    .subtitle {
+        font-size: 1rem;
+    }
+
+    .card {
+        padding: var(--space-md);
+    }
+
+    .cardHeader h2 {
+        font-size: 1.1rem;
+    }
+
+    .quickLinkIcon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .quickLinkTitle {
+        font-size: 0.9rem;
+    }
+
+    .quickLinkDesc {
+        font-size: 0.8rem;
+    }
+}

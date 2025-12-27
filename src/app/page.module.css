@@ -452,3 +452,43 @@
     font-size: 1.25rem;
   }
 }
+
+@media (max-width: 375px) {
+  .features {
+    padding: var(--space-2xl) 0;
+  }
+
+  .feature {
+    padding: var(--space-md);
+  }
+
+  .featureIcon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .sectionTitle {
+    font-size: 1.5rem;
+  }
+
+  .ctaContent h2 {
+    font-size: 1.5rem;
+  }
+
+  .ctaContent p {
+    font-size: 1rem;
+  }
+
+  .categoryName {
+    font-size: 1.1rem;
+  }
+
+  .categoriesSection,
+  .productsSection {
+    padding: var(--space-2xl) 0;
+  }
+
+  .aboutText p {
+    font-size: 1rem;
+  }
+}

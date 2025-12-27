@@ -177,3 +177,39 @@
         flex-direction: column;
     }
 }
+
+@media (max-width: 375px) {
+    .checkoutPage {
+        padding: var(--space-md) 0 var(--space-2xl);
+    }
+
+    .title {
+        font-size: 1.5rem;
+    }
+
+    .addressForm,
+    .orderSummary {
+        padding: var(--space-md);
+    }
+
+    .formGroup {
+        margin-bottom: var(--space-sm);
+    }
+
+    .summaryItem img {
+        width: 40px;
+        height: 40px;
+    }
+
+    .itemName {
+        font-size: 0.85rem;
+    }
+
+    .itemQty {
+        font-size: 0.75rem;
+    }
+
+    .grandTotal {
+        font-size: 1.1rem;
+    }
+}
