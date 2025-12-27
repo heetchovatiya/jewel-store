@@ -51,6 +51,7 @@ export async function uploadImage(
     const { uploadUrl, publicUrl }: PresignedUrlResponse = await presignedResponse.json();
 
     // Step 2: Upload file directly to DO Spaces using presigned URL
+    // The bucket should be configured with public file access at bucket level
     const uploadResponse = await fetch(uploadUrl, {
         method: 'PUT',
         headers: {
@@ -59,10 +60,14 @@ export async function uploadImage(
         body: file,
     });
 
+    // S3-compatible PUT responses return 200 OK on success
+    // Some may also return 204 No Content
     if (!uploadResponse.ok) {
-        throw new Error('Failed to upload file to storage');
+        console.error('Upload failed:', uploadResponse.status, uploadResponse.statusText);
+        throw new Error(`Failed to upload file to storage (${uploadResponse.status})`);
     }
 
+    console.log('Upload successful, public URL:', publicUrl);
     return publicUrl;
 }
 

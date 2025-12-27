@@ -138,11 +138,20 @@ export default function AdminProductsPage() {
 
     const deleteProduct = async (id: string) => {
         if (!confirm('Are you sure you want to delete this product?')) return;
+
+        // Optimistic update - remove from UI immediately
+        const previousProducts = [...products];
+        setProducts(products.filter(p => p._id !== id));
+
         try {
             await api.deleteProduct(id);
+            // Refetch to ensure sync with server
             fetchData();
         } catch (err) {
             console.error('Failed to delete product:', err);
+            // Rollback on error
+            setProducts(previousProducts);
+            alert('Failed to delete product. Please try again.');
         }
     };
 
@@ -157,12 +166,15 @@ export default function AdminProductsPage() {
         }
 
         setUploadingImage(true);
+        setError('');
         try {
             const url = await uploadImage(file, { folder: 'products' });
-            // Append to existing images
-            const currentImages = formData.images ? formData.images.split(',').map(s => s.trim()).filter(Boolean) : [];
-            currentImages.push(url);
-            setFormData({ ...formData, images: currentImages.join(', ') });
+            // Use functional setState to avoid stale closure issue
+            setFormData(prev => {
+                const currentImages = prev.images ? prev.images.split(',').map(s => s.trim()).filter(Boolean) : [];
+                currentImages.push(url);
+                return { ...prev, images: currentImages.join(', ') };
+            });
         } catch (err: any) {
             setError(err.message || 'Failed to upload image');
         } finally {

@@ -137,7 +137,8 @@ export default function AdminCategoriesPage() {
         setUploadingCategoryImage(true);
         try {
             const url = await uploadImage(file, { folder: 'categories' });
-            setNewCategory({ ...newCategory, image: url });
+            // Use functional setState to avoid stale closure issue
+            setNewCategory(prev => ({ ...prev, image: url }));
         } catch (err: any) {
             setUploadError(err.message || 'Failed to upload image');
         } finally {

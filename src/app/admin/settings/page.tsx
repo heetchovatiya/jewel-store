@@ -163,7 +163,8 @@ export default function AdminSettingsPage() {
         setUploadingLogo(true);
         try {
             const url = await uploadImage(file, { folder: 'logos' });
-            setConfig({ ...config, logoUrl: url });
+            // Use functional setState to avoid stale closure issue
+            setConfig(prev => ({ ...prev, logoUrl: url }));
         } catch (err: any) {
             setUploadError(err.message || 'Failed to upload logo');
         } finally {
@@ -186,10 +187,11 @@ export default function AdminSettingsPage() {
         setUploadingBanner(true);
         try {
             const url = await uploadImage(file, { folder: 'banners' });
-            setConfig({
-                ...config,
-                heroBanners: [...config.heroBanners, url],
-            });
+            // Use functional setState to avoid stale closure issue
+            setConfig(prev => ({
+                ...prev,
+                heroBanners: [...prev.heroBanners, url],
+            }));
         } catch (err: any) {
             setUploadError(err.message || 'Failed to upload banner');
         } finally {
@@ -212,13 +214,14 @@ export default function AdminSettingsPage() {
         setUploadingAbout(true);
         try {
             const url = await uploadImage(file, { folder: 'about' });
-            setConfig({
-                ...config,
+            // Use functional setState to avoid stale closure issue
+            setConfig(prev => ({
+                ...prev,
                 aboutUs: {
-                    ...config.aboutUs,
-                    images: [...config.aboutUs.images, url],
+                    ...prev.aboutUs,
+                    images: [...prev.aboutUs.images, url],
                 },
-            });
+            }));
         } catch (err: any) {
             setUploadError(err.message || 'Failed to upload image');
         } finally {
