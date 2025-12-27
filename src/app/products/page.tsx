@@ -22,16 +22,29 @@ function ProductsContent() {
     const [total, setTotal] = useState(0);
     const limit = 12;
 
+    // Sync URL params with state when they change (e.g., from navbar search)
+    useEffect(() => {
+        if (searchParam !== null && searchParam !== searchQuery) {
+            setSearchQuery(searchParam);
+            setDebouncedSearch(searchParam);
+            setPage(1);
+        }
+        if (categoryParam !== null && categoryParam !== selectedCategory) {
+            setSelectedCategory(categoryParam);
+            setPage(1);
+        }
+    }, [searchParam, categoryParam]);
+
     useEffect(() => {
         fetchCategories();
     }, []);
 
-    // Debounce search input
+    // Debounce search input (only for manual typing, not URL changes)
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(searchQuery);
-            setPage(1); // Reset to page 1 when search changes
-        }, 500); // 500ms delay
+            setPage(1);
+        }, 500);
 
         return () => clearTimeout(timer);
     }, [searchQuery]);
