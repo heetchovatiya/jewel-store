@@ -16,6 +16,7 @@ function ProductsContent() {
     const [loading, setLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || '');
     const [searchQuery, setSearchQuery] = useState(searchParam || '');
+    const [debouncedSearch, setDebouncedSearch] = useState(searchParam || '');
     const [sortBy, setSortBy] = useState('-createdAt');
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
@@ -25,9 +26,19 @@ function ProductsContent() {
         fetchCategories();
     }, []);
 
+    // Debounce search input
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+            setPage(1); // Reset to page 1 when search changes
+        }, 500); // 500ms delay
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
     useEffect(() => {
         fetchProducts();
-    }, [selectedCategory, sortBy, page, searchQuery]);
+    }, [selectedCategory, sortBy, page, debouncedSearch]);
 
     const fetchCategories = async () => {
         try {
@@ -43,7 +54,7 @@ function ProductsContent() {
         try {
             const params: any = { page, limit, sort: sortBy };
             if (selectedCategory) params.category = selectedCategory;
-            if (searchQuery) params.search = searchQuery;
+            if (debouncedSearch) params.search = debouncedSearch;
 
             const res = await api.getProducts(params);
             setProducts(res.products);

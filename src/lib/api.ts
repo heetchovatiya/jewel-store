@@ -91,14 +91,15 @@ class ApiClient {
         return this.request<any>('/admin/config', { method: 'PATCH', body: data });
     }
 
-    // Products - use body for params to avoid string conversion issues
-    async getProducts(params: { limit?: number; page?: number; category?: string; search?: string } = {}) {
+    // Products - use query params for filtering and sorting
+    async getProducts(params: { limit?: number; page?: number; category?: string; search?: string; sort?: string } = {}) {
         // Build query manually to ensure proper URL encoding
         const queryParts: string[] = [];
         if (params.limit !== undefined) queryParts.push(`limit=${params.limit}`);
         if (params.page !== undefined) queryParts.push(`page=${params.page}`);
         if (params.category) queryParts.push(`category=${encodeURIComponent(params.category)}`);
         if (params.search) queryParts.push(`search=${encodeURIComponent(params.search)}`);
+        if (params.sort) queryParts.push(`sort=${params.sort}`);
         const query = queryParts.join('&');
         return this.request<{ products: any[]; total: number }>(`/products${query ? '?' + query : ''}`);
     }

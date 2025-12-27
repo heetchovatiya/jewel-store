@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
@@ -15,16 +16,21 @@ interface Category {
 }
 
 export default function Navbar() {
+    const router = useRouter();
     const { config } = useTheme();
     const { user, isAuthenticated, isAdmin, logout } = useAuth();
     const { itemCount } = useCart();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [categoriesOpen, setCategoriesOpen] = useState(false);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Refs for click outside detection
     const userMenuRef = useRef<HTMLDivElement>(null);
     const categoriesRef = useRef<HTMLDivElement>(null);
+    const searchRef = useRef<HTMLDivElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Get all categories from config, sorted by order
     const categories: Category[] = (config?.categories || []).sort((a: Category, b: Category) => a.order - b.order);
@@ -38,16 +44,38 @@ export default function Navbar() {
             if (categoriesRef.current && !categoriesRef.current.contains(event.target as Node)) {
                 setCategoriesOpen(false);
             }
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setSearchOpen(false);
+            }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Focus search input when opened
+    useEffect(() => {
+        if (searchOpen && searchInputRef.current) {
+            searchInputRef.current.focus();
+        }
+    }, [searchOpen]);
+
+    // Handle search submit
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (searchQuery.trim()) {
+            router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+            setSearchOpen(false);
+            setSearchQuery('');
+            handleNavClick();
+        }
+    };
+
     // Close mobile menu when navigating
     const handleNavClick = () => {
         setMobileMenuOpen(false);
         setUserMenuOpen(false);
+        setSearchOpen(false);
     };
 
     return (
@@ -109,13 +137,35 @@ export default function Navbar() {
 
                 {/* Right Section */}
                 <div className={styles.navActions}>
-                    {/* Search Button */}
-                    <Link href="/products" className={styles.iconBtn} title="Search Products">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="m21 21-4.35-4.35"></path>
-                        </svg>
-                    </Link>
+                    {/* Search */}
+                    <div ref={searchRef} className={`${styles.searchWrapper} ${searchOpen ? styles.searchOpen : ''}`}>
+                        <form onSubmit={handleSearch} className={styles.searchForm}>
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                placeholder="Search products..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className={styles.searchInput}
+                            />
+                            <button type="submit" className={styles.searchSubmit}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <path d="m21 21-4.35-4.35"></path>
+                                </svg>
+                            </button>
+                        </form>
+                        <button
+                            className={styles.iconBtn}
+                            onClick={() => setSearchOpen(!searchOpen)}
+                            title="Search Products"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                        </button>
+                    </div>
 
                     {/* Cart */}
                     <Link href="/cart" className={styles.cartBtn}>
@@ -214,6 +264,23 @@ export default function Navbar() {
 
             {/* Mobile Menu */}
             <div className={`${styles.mobileMenu} ${mobileMenuOpen ? styles.open : ''}`}>
+                {/* Mobile Search */}
+                <form onSubmit={handleSearch} className={styles.mobileSearchForm}>
+                    <input
+                        type="text"
+                        placeholder="Search products..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className={styles.mobileSearchInput}
+                    />
+                    <button type="submit" className={styles.mobileSearchBtn}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                    </button>
+                </form>
+
                 <Link href="/" className={styles.mobileLink} onClick={handleNavClick}>Home</Link>
                 <Link href="/products" className={styles.mobileLink} onClick={handleNavClick}>Shop All</Link>
 
