@@ -25,6 +25,7 @@ function ProductsContent() {
     const [isMobile, setIsMobile] = useState(false);
     const observerRef = useRef<IntersectionObserver | null>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
+    const shouldResetProductsRef = useRef(false);
     const limit = 12;
 
     // Sync URL params with state when they change (e.g., from navbar search)
@@ -32,10 +33,12 @@ function ProductsContent() {
         if (searchParam !== null && searchParam !== searchQuery) {
             setSearchQuery(searchParam);
             setDebouncedSearch(searchParam);
+            shouldResetProductsRef.current = true;
             setPage(1);
         }
         if (categoryParam !== null && categoryParam !== selectedCategory) {
             setSelectedCategory(categoryParam);
+            shouldResetProductsRef.current = true;
             setPage(1);
         }
     }, [searchParam, categoryParam]);
@@ -47,16 +50,37 @@ function ProductsContent() {
     // Debounce search input (only for manual typing, not URL changes)
     useEffect(() => {
         const timer = setTimeout(() => {
-            setDebouncedSearch(searchQuery);
-            setPage(1);
+            if (searchQuery !== debouncedSearch) {
+                setDebouncedSearch(searchQuery);
+                shouldResetProductsRef.current = true;
+                setPage(1);
+            }
         }, 500);
 
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
+    // Fetch when filters change (not page)
+    useEffect(() => {
+        shouldResetProductsRef.current = true;
+        setPage(1);
+    }, [selectedCategory, sortBy, debouncedSearch]);
+
+    // Fetch products when page changes or initial load
+    useEffect(() => {
+        if (page === 1 || !isMobile) {
+            // Initial load or desktop pagination - fresh fetch
+            fetchProducts();
+        } else if (isMobile && page > 1) {
+            // Mobile infinite scroll - append
+            fetchProducts(true);
+        }
+    }, [page]);
+
+    // Also fetch on initial mount
     useEffect(() => {
         fetchProducts();
-    }, [selectedCategory, sortBy, page, debouncedSearch]);
+    }, []);
 
     const fetchCategories = async () => {
         try {
@@ -80,11 +104,13 @@ function ProductsContent() {
 
             const res = await api.getProducts(params);
 
-            if (loadMore && isMobile) {
+            if (loadMore && isMobile && !shouldResetProductsRef.current) {
                 // Append products for infinite scroll
                 setProducts(prev => [...prev, ...res.products]);
             } else {
+                // Reset products (new filter/search or desktop pagination)
                 setProducts(res.products);
+                shouldResetProductsRef.current = false;
             }
             setTotal(res.total);
         } catch (err) {
@@ -101,8 +127,8 @@ function ProductsContent() {
         setDebouncedSearch('');
         setSelectedCategory('');
         setSortBy('-createdAt');
+        shouldResetProductsRef.current = true;
         setPage(1);
-        setProducts([]);
         // Also clear URL params
         router.push('/products');
     };
@@ -140,13 +166,6 @@ function ProductsContent() {
 
         return () => observerRef.current?.disconnect();
     }, [isMobile, loading, loadingMore, products.length, total]);
-
-    // When page changes on mobile, load more products
-    useEffect(() => {
-        if (isMobile && page > 1) {
-            fetchProducts(true);
-        }
-    }, [page]);
 
     const totalPages = Math.ceil(total / limit);
 

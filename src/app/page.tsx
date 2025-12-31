@@ -27,7 +27,7 @@ export default function HomePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const productsRes = await api.getProducts({ limit: 8 });
+        const productsRes = await api.getProducts({ limit: 8, featured: true });
         setProducts(productsRes.products);
       } catch (err) {
         console.error('Failed to fetch data:', err);
@@ -39,7 +39,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className={styles.home}>
+    <div className={styles.home} data-page="home">
       <HeroCarousel />
 
       {/* Features */}
@@ -193,7 +193,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Testimonial Section */}
+      {/* Testimonial Section - Hidden for now */}
+      {/* 
       <section className={styles.testimonials}>
         <div className="container">
           <div className={styles.sectionHeader}>
@@ -236,6 +237,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      */}
 
       {/* CTA Section */}
       <section className={styles.cta}>

@@ -64,6 +64,24 @@ body {
   scroll-behavior: smooth;
 }
 
+/* Main Content - Responsive navbar offset */
+.main-content {
+  min-height: 100vh;
+  padding-top: 72px;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding-top: 64px;
+  }
+}
+
+@media (max-width: 320px) {
+  .main-content {
+    padding-top: 56px;
+  }
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 8px;

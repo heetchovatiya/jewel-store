@@ -92,7 +92,7 @@ class ApiClient {
     }
 
     // Products - use query params for filtering and sorting
-    async getProducts(params: { limit?: number; page?: number; category?: string; search?: string; sort?: string } = {}) {
+    async getProducts(params: { limit?: number; page?: number; category?: string; search?: string; sort?: string; featured?: boolean } = {}) {
         // Build query manually to ensure proper URL encoding
         const queryParts: string[] = [];
         if (params.limit !== undefined) queryParts.push(`limit=${params.limit}`);
@@ -100,6 +100,7 @@ class ApiClient {
         if (params.category) queryParts.push(`category=${encodeURIComponent(params.category)}`);
         if (params.search) queryParts.push(`search=${encodeURIComponent(params.search)}`);
         if (params.sort) queryParts.push(`sort=${params.sort}`);
+        if (params.featured !== undefined) queryParts.push(`featured=${params.featured}`);
         const query = queryParts.join('&');
         return this.request<{ products: any[]; total: number }>(`/products${query ? '?' + query : ''}`);
     }

@@ -18,8 +18,53 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Jewel Store - Exquisite Jewelry Collection",
-  description: "Discover timeless elegance crafted with precision and passion. Premium jewelry for every occasion.",
+  title: "Gautam Gold Palace | 925 Sterling Silver Jewellery | Premium Silver Ornaments",
+  description: "Shop exquisite 925 sterling silver jewellery at Gautam Gold Palace. Discover our premium collection of authentic silver rings, necklaces, bracelets, earrings & more. Certified quality, handcrafted designs, free shipping across India.",
+  keywords: "925 silver jewellery, sterling silver, silver ornaments, silver rings, silver necklaces, silver bracelets, silver earrings, pure silver jewelry, hallmarked silver, indian silver jewellery, gautam gold palace, premium silver collection, handcrafted silver, authentic silver jewelry",
+  authors: [{ name: "Gautam Gold Palace" }],
+  creator: "Gautam Gold Palace",
+  publisher: "Gautam Gold Palace",
+  metadataBase: new URL("https://www.gautam-gold-palace.com"),
+  alternates: {
+    canonical: "https://www.gautam-gold-palace.com",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    url: "https://www.gautam-gold-palace.com",
+    siteName: "Gautam Gold Palace",
+    title: "Gautam Gold Palace | 925 Sterling Silver Jewellery",
+    description: "Shop exquisite 925 sterling silver jewellery. Premium quality, handcrafted designs, authentic hallmarked silver ornaments.",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Gautam Gold Palace - 925 Sterling Silver Jewellery Collection",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Gautam Gold Palace | 925 Sterling Silver Jewellery",
+    description: "Shop exquisite 925 sterling silver jewellery. Premium quality, handcrafted designs, authentic hallmarked silver ornaments.",
+    images: ["/og-image.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  verification: {
+    google: "your-google-verification-code",
+  },
+  category: "Jewellery",
 };
 
 export default function RootLayout({
@@ -34,7 +79,7 @@ export default function RootLayout({
           <AuthProvider>
             <CartProvider>
               <Navbar />
-              <main style={{ minHeight: '100vh', paddingTop: '72px' }}>
+              <main className="main-content">
                 {children}
               </main>
               <Footer />

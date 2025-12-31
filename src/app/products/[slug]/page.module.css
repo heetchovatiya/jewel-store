@@ -1,5 +1,5 @@
 .productPage {
-    padding: var(--space-xl) 0 var(--space-3xl);
+    padding: 0 0 var(--space-3xl);
 }
 
 .loadingPage,
@@ -197,6 +197,110 @@
     margin-top: var(--space-lg);
 }
 
+/* Product Info Section */
+.productInfo {
+    margin-top: var(--space-xl);
+    padding-top: var(--space-xl);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.productInfoTitle,
+.careSectionTitle,
+.specsTitle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 1.1rem;
+    margin-bottom: var(--space-lg);
+    color: var(--primary);
+}
+
+.productInfoTitle svg,
+.careSectionTitle svg,
+.specsTitle svg {
+    flex-shrink: 0;
+}
+
+.infoGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+}
+
+.infoCard {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.infoCard:hover {
+    background: rgba(212, 175, 55, 0.05);
+    border-color: rgba(212, 175, 55, 0.2);
+}
+
+.infoIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: rgba(212, 175, 55, 0.1);
+    border-radius: var(--radius-md);
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.infoContent h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+    color: var(--text);
+}
+
+.infoContent p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+/* Care Instructions Section */
+.careSection {
+    margin-top: var(--space-xl);
+    padding-top: var(--space-xl);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.careList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.careList li {
+    position: relative;
+    padding: var(--space-sm) 0 var(--space-sm) var(--space-xl);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.careList li:last-child {
+    border-bottom: none;
+}
+
+.careList li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--success);
+    font-weight: 600;
+}
+
 /* Modal */
 .modal {
     position: fixed;
@@ -266,6 +370,37 @@
 
     .actions {
         flex-direction: column;
+    }
+
+    .infoGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .infoCard {
+        padding: var(--space-sm);
+    }
+
+    .infoIcon {
+        width: 38px;
+        height: 38px;
+    }
+
+    .infoIcon svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .infoContent h4 {
+        font-size: 0.9rem;
+    }
+
+    .infoContent p {
+        font-size: 0.75rem;
+    }
+
+    .careList li {
+        font-size: 0.85rem;
+        padding-left: var(--space-lg);
     }
 }
 

@@ -36,6 +36,7 @@ export default function AdminProductsPage() {
         sku: '',
         lowStockThreshold: 5,
         isFeatured: false,
+        specifications: {} as Record<string, string>,
     });
     const [error, setError] = useState('');
 
@@ -89,6 +90,7 @@ export default function AdminProductsPage() {
                     sku: productWithInventory.inventory?.sku || '',
                     lowStockThreshold: productWithInventory.inventory?.lowStockThreshold || 5,
                     isFeatured: productWithInventory.isFeatured || false,
+                    specifications: productWithInventory.specifications || {},
                 });
             } catch (err) {
                 console.error('Failed to fetch inventory:', err);
@@ -103,6 +105,7 @@ export default function AdminProductsPage() {
                     sku: '',
                     lowStockThreshold: 5,
                     isFeatured: product.isFeatured || false,
+                    specifications: product.specifications || {},
                 });
             } finally {
                 setLoadingInventory(false);
@@ -119,6 +122,7 @@ export default function AdminProductsPage() {
                 sku: '',
                 lowStockThreshold: 5,
                 isFeatured: false,
+                specifications: {},
             });
         }
         setShowModal(true);
@@ -139,8 +143,9 @@ export default function AdminProductsPage() {
                 description: formData.description,
                 price: formData.price,
                 category: formData.category,
-                images: formData.images, // Already an array
+                images: formData.images,
                 isFeatured: formData.isFeatured,
+                specifications: formData.specifications,
             };
 
             if (editProduct) {
@@ -464,6 +469,82 @@ export default function AdminProductsPage() {
                                     <span>Mark as Featured Product</span>
                                 </label>
                                 <span className={styles.hint}>Featured products appear on the homepage</span>
+                            </div>
+
+                            {/* Specifications Section */}
+                            <div className={styles.formGroup}>
+                                <label className="label">Product Specifications</label>
+                                <span className={styles.hint} style={{ marginBottom: 'var(--space-sm)', display: 'block' }}>
+                                    Add specifications like Material, Weight, Purity, etc.
+                                </span>
+                                <div className={styles.specsEditor}>
+                                    {Object.entries(formData.specifications).map(([key, value], index) => (
+                                        <div key={index} className={styles.specRow}>
+                                            <input
+                                                type="text"
+                                                className="input"
+                                                placeholder="Name (e.g., Material)"
+                                                value={key}
+                                                onChange={(e) => {
+                                                    const newSpecs = { ...formData.specifications };
+                                                    const oldValue = newSpecs[key];
+                                                    delete newSpecs[key];
+                                                    if (e.target.value) {
+                                                        newSpecs[e.target.value] = oldValue;
+                                                    }
+                                                    setFormData({ ...formData, specifications: newSpecs });
+                                                }}
+                                            />
+                                            <input
+                                                type="text"
+                                                className="input"
+                                                placeholder="Value (e.g., 925 Silver)"
+                                                value={value}
+                                                onChange={(e) => {
+                                                    setFormData({
+                                                        ...formData,
+                                                        specifications: {
+                                                            ...formData.specifications,
+                                                            [key]: e.target.value
+                                                        }
+                                                    });
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                className={styles.removeSpecBtn}
+                                                onClick={() => {
+                                                    const newSpecs = { ...formData.specifications };
+                                                    delete newSpecs[key];
+                                                    setFormData({ ...formData, specifications: newSpecs });
+                                                }}
+                                                title="Remove specification"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        className={styles.addSpecBtn}
+                                        onClick={() => {
+                                            const newKey = `Spec ${Object.keys(formData.specifications).length + 1}`;
+                                            setFormData({
+                                                ...formData,
+                                                specifications: {
+                                                    ...formData.specifications,
+                                                    [newKey]: ''
+                                                }
+                                            });
+                                        }}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        </svg>
+                                        Add Specification
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Inventory Section */}

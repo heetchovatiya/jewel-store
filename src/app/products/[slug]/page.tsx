@@ -165,10 +165,99 @@ export default function ProductDetailPage() {
                             Inquire About This Product
                         </button>
 
+                        {/* Product Info Section */}
+                        <div className={styles.productInfo}>
+                            <h3 className={styles.productInfoTitle}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                                Product Information
+                            </h3>
+                            <div className={styles.infoGrid}>
+                                <div className={styles.infoCard}>
+                                    <div className={styles.infoIcon}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                        </svg>
+                                    </div>
+                                    <div className={styles.infoContent}>
+                                        <h4>925 Sterling Silver</h4>
+                                        <p>Hallmarked authentic silver with 92.5% purity certification</p>
+                                    </div>
+                                </div>
+                                <div className={styles.infoCard}>
+                                    <div className={styles.infoIcon}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                        </svg>
+                                    </div>
+                                    <div className={styles.infoContent}>
+                                        <h4>Handcrafted Design</h4>
+                                        <p>Each piece is carefully crafted by skilled artisans</p>
+                                    </div>
+                                </div>
+                                <div className={styles.infoCard}>
+                                    <div className={styles.infoIcon}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="1" y="3" width="15" height="13"></rect>
+                                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                                            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                                            <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                                        </svg>
+                                    </div>
+                                    <div className={styles.infoContent}>
+                                        <h4>Free Shipping</h4>
+                                        <p>Free delivery on orders above ₹999 across India</p>
+                                    </div>
+                                </div>
+                                <div className={styles.infoCard}>
+                                    <div className={styles.infoIcon}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="23 4 23 10 17 10"></polyline>
+                                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                        </svg>
+                                    </div>
+                                    <div className={styles.infoContent}>
+                                        <h4>Easy Returns</h4>
+                                        <p>7-day easy return policy for unused products</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Care Instructions */}
+                        <div className={styles.careSection}>
+                            <h3 className={styles.careSectionTitle}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M9 12l2 2 4-4"></path>
+                                    <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.12 0 4.07.74 5.61 1.97"></path>
+                                </svg>
+                                Care Instructions
+                            </h3>
+                            <ul className={styles.careList}>
+                                <li>Store in a cool, dry place away from direct sunlight</li>
+                                <li>Avoid contact with perfumes, lotions, and chemicals</li>
+                                <li>Clean gently with a soft, lint-free cloth</li>
+                                <li>Remove jewellery before swimming or bathing</li>
+                            </ul>
+                        </div>
+
                         {/* Specifications */}
                         {product.specifications && Object.keys(product.specifications).length > 0 && (
                             <div className={styles.specs}>
-                                <h3>Specifications</h3>
+                                <h3 className={styles.specsTitle}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                                    </svg>
+                                    Specifications
+                                </h3>
                                 <table>
                                     <tbody>
                                         {Object.entries(product.specifications).map(([key, value]) => (

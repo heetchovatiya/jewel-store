@@ -1,5 +1,5 @@
 .productsPage {
-    padding: var(--space-xl) 0 var(--space-3xl);
+    padding: 0 0 var(--space-3xl);
 }
 
 .header {
@@ -37,14 +37,31 @@
     max-width: 300px;
 }
 
+.searchBox input {
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    background: rgba(212, 175, 55, 0.05);
+}
+
+.searchBox input:focus {
+    border-color: var(--primary);
+    background: rgba(212, 175, 55, 0.1);
+}
+
 .select {
     min-width: 180px;
     cursor: pointer;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23d4af37' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 16px center;
     padding-right: 40px;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    background-color: rgba(212, 175, 55, 0.05);
+}
+
+.select:focus {
+    border-color: var(--primary);
+    background-color: rgba(212, 175, 55, 0.1);
 }
 
 .results {
@@ -114,15 +131,24 @@
 @media (max-width: 768px) {
     .controls {
         flex-direction: column;
+        gap: var(--space-sm);
     }
 
     .filters {
         width: 100%;
         flex-direction: column;
+        gap: var(--space-sm);
     }
 
     .searchBox {
         max-width: 100%;
+    }
+
+    .searchBox input,
+    .select {
+        padding: var(--space-md);
+        font-size: 1rem;
+        border-radius: var(--radius-lg);
     }
 
     .select {

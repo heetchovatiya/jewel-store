@@ -264,23 +264,6 @@ export default function Navbar() {
 
             {/* Mobile Menu */}
             <div className={`${styles.mobileMenu} ${mobileMenuOpen ? styles.open : ''}`}>
-                {/* Mobile Search */}
-                <form onSubmit={handleSearch} className={styles.mobileSearchForm}>
-                    <input
-                        type="text"
-                        placeholder="Search products..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className={styles.mobileSearchInput}
-                    />
-                    <button type="submit" className={styles.mobileSearchBtn}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="m21 21-4.35-4.35"></path>
-                        </svg>
-                    </button>
-                </form>
-
                 <Link href="/" className={styles.mobileLink} onClick={handleNavClick}>Home</Link>
                 <Link href="/products" className={styles.mobileLink} onClick={handleNavClick}>Shop All</Link>
 
@@ -311,6 +294,39 @@ export default function Navbar() {
                     </Link>
                 )}
             </div>
+
+            {/* Mobile Search Overlay */}
+            {searchOpen && (
+                <div className={styles.mobileSearchOverlay}>
+                    <form onSubmit={handleSearch} className={styles.mobileSearchForm}>
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            placeholder="Search products..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className={styles.mobileSearchInput}
+                            autoFocus
+                        />
+                        <button type="submit" className={styles.mobileSearchBtn}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            className={styles.mobileSearchClose}
+                            onClick={() => setSearchOpen(false)}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            )}
         </nav>
     );
 }
