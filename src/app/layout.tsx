@@ -74,6 +74,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Default favicon and icons - will be dynamically replaced by ThemeContext with admin logo */}
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/favicon.ico" />
+      </head>
       <body className={`${inter.variable} ${playfair.variable}`}>
         <ThemeProvider>
           <AuthProvider>

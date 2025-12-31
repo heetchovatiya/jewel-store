@@ -97,7 +97,7 @@ export default function Navbar() {
 
                     {/* About Us - Only show when enabled */}
                     {config?.aboutUs?.enabled && (
-                        <a href="#about-us" className={styles.navLink}>About Us</a>
+                        <Link href="/#about-us" className={styles.navLink} onClick={handleNavClick}>About Us</Link>
                     )}
 
                     {/* All Categories Dropdown on Hover */}
@@ -269,7 +269,7 @@ export default function Navbar() {
 
                 {/* About Us - Only show when enabled */}
                 {config?.aboutUs?.enabled && (
-                    <a href="#about-us" className={styles.mobileLink} onClick={handleNavClick}>About Us</a>
+                    <Link href="/#about-us" className={styles.mobileLink} onClick={handleNavClick}>About Us</Link>
                 )}
 
                 {categories.length > 0 && (

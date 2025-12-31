@@ -86,14 +86,74 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             root.style.setProperty('--background', config.backgroundColor);
             root.style.setProperty('--text', config.textColor);
 
-            // Update favicon if provided
-            if (config.faviconUrl) {
-                const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-                if (favicon) favicon.href = config.faviconUrl;
+            // Update favicon - use faviconUrl, or fall back to logoUrl
+            const faviconToUse = config.faviconUrl || config.logoUrl;
+            if (faviconToUse) {
+                // Update or create the favicon link element
+                let favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+                if (!favicon) {
+                    favicon = document.createElement('link');
+                    favicon.rel = 'icon';
+                    document.head.appendChild(favicon);
+                }
+                favicon.href = faviconToUse;
+
+                // Also update apple-touch-icon for iOS
+                let appleTouchIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+                if (!appleTouchIcon) {
+                    appleTouchIcon = document.createElement('link');
+                    appleTouchIcon.rel = 'apple-touch-icon';
+                    document.head.appendChild(appleTouchIcon);
+                }
+                appleTouchIcon.href = faviconToUse;
             }
 
             // Update page title
-            document.title = config.storeName;
+            document.title = config.storeName || 'Jewel Store';
+
+            // Update meta description
+            let metaDescription = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+            if (!metaDescription) {
+                metaDescription = document.createElement('meta');
+                metaDescription.name = 'description';
+                document.head.appendChild(metaDescription);
+            }
+            metaDescription.content = config.storeDescription || 'Premium jewelry collection';
+
+            // Update Open Graph meta tags for social sharing
+            const updateOrCreateMeta = (property: string, content: string) => {
+                let meta = document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
+                if (!meta) {
+                    meta = document.createElement('meta');
+                    meta.setAttribute('property', property);
+                    document.head.appendChild(meta);
+                }
+                meta.content = content;
+            };
+
+            updateOrCreateMeta('og:title', config.storeName || 'Jewel Store');
+            updateOrCreateMeta('og:description', config.storeDescription || 'Premium jewelry collection');
+            updateOrCreateMeta('og:site_name', config.storeName || 'Jewel Store');
+            if (config.logoUrl) {
+                updateOrCreateMeta('og:image', config.logoUrl);
+            }
+
+            // Update Twitter card meta tags
+            const updateOrCreateTwitterMeta = (name: string, content: string) => {
+                let meta = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+                if (!meta) {
+                    meta = document.createElement('meta');
+                    meta.name = name;
+                    document.head.appendChild(meta);
+                }
+                meta.content = content;
+            };
+
+            updateOrCreateTwitterMeta('twitter:title', config.storeName || 'Jewel Store');
+            updateOrCreateTwitterMeta('twitter:description', config.storeDescription || 'Premium jewelry collection');
+            if (config.logoUrl) {
+                updateOrCreateTwitterMeta('twitter:image', config.logoUrl);
+            }
         }
     };
 
