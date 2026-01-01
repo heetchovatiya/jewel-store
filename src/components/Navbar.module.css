@@ -443,6 +443,16 @@
     .navLinks {
         display: none;
     }
+
+    .mobileToggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mobileMenu {
+        display: flex;
+    }
 }
 
 @media (max-width: 768px) {

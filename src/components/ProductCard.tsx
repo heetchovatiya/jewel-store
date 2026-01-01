@@ -14,6 +14,7 @@ interface ProductCardProps {
         price: number;
         compareAtPrice?: number;
         images: string[];
+        hoverImageIndex?: number | null;
         slug: string;
         category: string;
         inventory?: {
@@ -47,11 +48,20 @@ export default function ProductCard({ product }: ProductCardProps) {
     return (
         <Link href={`/products/${product.slug}`} className={styles.card}>
             <div className={styles.imageWrapper}>
-                <img
-                    src={product.images?.[0] || '/placeholder-jewelry.svg'}
-                    alt={product.title}
-                    className={styles.image}
-                />
+                <div className={`${styles.imageSlider} ${product.hoverImageIndex != null && product.images?.[product.hoverImageIndex] ? styles.hasHoverImage : ''}`}>
+                    <img
+                        src={product.images?.[0] || '/placeholder-jewelry.svg'}
+                        alt={product.title}
+                        className={styles.image}
+                    />
+                    {product.hoverImageIndex != null && product.images?.[product.hoverImageIndex] && (
+                        <img
+                            src={product.images[product.hoverImageIndex]}
+                            alt={`${product.title} - alternate view`}
+                            className={styles.image}
+                        />
+                    )}
+                </div>
                 {discount > 0 && (
                     <span className={styles.discountBadge}>-{discount}%</span>
                 )}

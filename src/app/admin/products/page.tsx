@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
-import { uploadImage, validateImageFile } from '@/lib/upload';
+import { uploadImage, validateImageFile, deleteImage } from '@/lib/upload';
 import styles from './page.module.css';
 
 interface Category {
@@ -32,11 +32,12 @@ export default function AdminProductsPage() {
         price: 0,
         category: '',
         images: [] as string[],
+        hoverImageIndex: null as number | null,
         stock: 0,
         sku: '',
         lowStockThreshold: 5,
         isFeatured: false,
-        specifications: {} as Record<string, string>,
+        specifications: [] as { key: string; value: string }[],
     });
     const [error, setError] = useState('');
 
@@ -86,11 +87,12 @@ export default function AdminProductsPage() {
                     price: productWithInventory.price,
                     category: productWithInventory.category,
                     images: Array.isArray(productWithInventory.images) ? productWithInventory.images : [],
+                    hoverImageIndex: productWithInventory.hoverImageIndex ?? null,
                     stock: productWithInventory.inventory?.stock || 0,
                     sku: productWithInventory.inventory?.sku || '',
                     lowStockThreshold: productWithInventory.inventory?.lowStockThreshold || 5,
                     isFeatured: productWithInventory.isFeatured || false,
-                    specifications: productWithInventory.specifications || {},
+                    specifications: Object.entries(productWithInventory.specifications || {}).map(([key, value]) => ({ key, value: value as string })),
                 });
             } catch (err) {
                 console.error('Failed to fetch inventory:', err);
@@ -101,11 +103,12 @@ export default function AdminProductsPage() {
                     price: product.price,
                     category: product.category,
                     images: Array.isArray(product.images) ? product.images : [],
+                    hoverImageIndex: product.hoverImageIndex ?? null,
                     stock: 0,
                     sku: '',
                     lowStockThreshold: 5,
                     isFeatured: product.isFeatured || false,
-                    specifications: product.specifications || {},
+                    specifications: Object.entries(product.specifications || {}).map(([key, value]) => ({ key, value: value as string })),
                 });
             } finally {
                 setLoadingInventory(false);
@@ -118,11 +121,12 @@ export default function AdminProductsPage() {
                 price: 0,
                 category: categories[0]?.slug || '',
                 images: [],
+                hoverImageIndex: null,
                 stock: 10,
                 sku: '',
                 lowStockThreshold: 5,
                 isFeatured: false,
-                specifications: {},
+                specifications: [],
             });
         }
         setShowModal(true);
@@ -138,15 +142,30 @@ export default function AdminProductsPage() {
         }
 
         try {
-            const productData = {
+            // Clean up specifications - convert array to object, remove empty keys and values
+            const cleanSpecs: Record<string, string> = {};
+            formData.specifications.forEach(({ key, value }) => {
+                const trimmedKey = (key || '').trim();
+                const trimmedValue = (value || '').trim();
+                if (trimmedKey && trimmedValue) {
+                    cleanSpecs[trimmedKey] = trimmedValue;
+                }
+            });
+
+            const productData: any = {
                 title: formData.title,
                 description: formData.description,
                 price: formData.price,
                 category: formData.category,
                 images: formData.images,
                 isFeatured: formData.isFeatured,
-                specifications: formData.specifications,
+                specifications: cleanSpecs,
             };
+
+            // Only include hoverImageIndex if it's set
+            if (formData.hoverImageIndex !== null) {
+                productData.hoverImageIndex = formData.hoverImageIndex;
+            }
 
             if (editProduct) {
                 // Update product
@@ -230,10 +249,35 @@ export default function AdminProductsPage() {
         }
     };
 
-    const removeImage = (index: number) => {
+    const removeImage = async (index: number) => {
+        const imageUrl = formData.images[index];
+
+        // Delete from DO Spaces (fire and forget - don't block UI)
+        if (imageUrl && imageUrl.includes('digitaloceanspaces.com')) {
+            deleteImage(imageUrl).catch(err => console.error('Failed to delete image:', err));
+        }
+
+        setFormData(prev => {
+            // If removing the hover image, reset hoverImageIndex
+            let newHoverIndex = prev.hoverImageIndex;
+            if (prev.hoverImageIndex === index) {
+                newHoverIndex = null;
+            } else if (prev.hoverImageIndex !== null && prev.hoverImageIndex > index) {
+                // Adjust index if removing an image before the hover image
+                newHoverIndex = prev.hoverImageIndex - 1;
+            }
+            return {
+                ...prev,
+                images: prev.images.filter((_, i) => i !== index),
+                hoverImageIndex: newHoverIndex,
+            };
+        });
+    };
+
+    const toggleHoverImage = (index: number) => {
         setFormData(prev => ({
             ...prev,
-            images: prev.images.filter((_, i) => i !== index),
+            hoverImageIndex: prev.hoverImageIndex === index ? null : index,
         }));
     };
 
@@ -422,18 +466,34 @@ export default function AdminProductsPage() {
                             </div>
                             <div className={styles.formGroup}>
                                 <label className="label">Product Images</label>
+                                <span className={styles.hint} style={{ marginBottom: 'var(--space-sm)', display: 'block' }}>
+                                    Click the ★ button to mark an image as the hover image (shown when customers hover over the product)
+                                </span>
                                 <div className={styles.imageGallery}>
                                     {formData.images.map((url, index) => (
-                                        <div key={index} className={styles.imageThumb}>
+                                        <div key={index} className={`${styles.imageThumb} ${formData.hoverImageIndex === index ? styles.hoverImageSelected : ''}`}>
                                             <img src={url} alt={`Product ${index + 1}`} />
-                                            <button
-                                                type="button"
-                                                className={styles.removeImageBtn}
-                                                onClick={() => removeImage(index)}
-                                                title="Remove image"
-                                            >
-                                                ×
-                                            </button>
+                                            <div className={styles.imageActions}>
+                                                <button
+                                                    type="button"
+                                                    className={`${styles.hoverBadgeBtn} ${formData.hoverImageIndex === index ? styles.active : ''}`}
+                                                    onClick={() => toggleHoverImage(index)}
+                                                    title={formData.hoverImageIndex === index ? 'Remove as hover image' : 'Set as hover image'}
+                                                >
+                                                    {formData.hoverImageIndex === index ? '★' : '☆'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={styles.removeImageBtn}
+                                                    onClick={() => removeImage(index)}
+                                                    title="Remove image"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                            {formData.hoverImageIndex === index && (
+                                                <span className={styles.hoverLabel}>Hover</span>
+                                            )}
                                         </div>
                                     ))}
                                     <label className={`${styles.uploadPlaceholder} ${uploadingImage ? styles.disabled : ''}`}>
@@ -455,7 +515,7 @@ export default function AdminProductsPage() {
                                 </div>
                                 {formData.images.length > 0 && (
                                     <span className={styles.imageCount}>
-                                        {formData.images.length} image{formData.images.length !== 1 ? 's' : ''} • Click image to remove
+                                        {formData.images.length} image{formData.images.length !== 1 ? 's' : ''} • Click ★ to set hover image • Click × to remove
                                     </span>
                                 )}
                             </div>
@@ -478,20 +538,16 @@ export default function AdminProductsPage() {
                                     Add specifications like Material, Weight, Purity, etc.
                                 </span>
                                 <div className={styles.specsEditor}>
-                                    {Object.entries(formData.specifications).map(([key, value], index) => (
+                                    {formData.specifications.map((spec, index) => (
                                         <div key={index} className={styles.specRow}>
                                             <input
                                                 type="text"
                                                 className="input"
                                                 placeholder="Name (e.g., Material)"
-                                                value={key}
+                                                value={spec.key}
                                                 onChange={(e) => {
-                                                    const newSpecs = { ...formData.specifications };
-                                                    const oldValue = newSpecs[key];
-                                                    delete newSpecs[key];
-                                                    if (e.target.value) {
-                                                        newSpecs[e.target.value] = oldValue;
-                                                    }
+                                                    const newSpecs = [...formData.specifications];
+                                                    newSpecs[index] = { ...newSpecs[index], key: e.target.value };
                                                     setFormData({ ...formData, specifications: newSpecs });
                                                 }}
                                             />
@@ -499,23 +555,18 @@ export default function AdminProductsPage() {
                                                 type="text"
                                                 className="input"
                                                 placeholder="Value (e.g., 925 Silver)"
-                                                value={value}
+                                                value={spec.value}
                                                 onChange={(e) => {
-                                                    setFormData({
-                                                        ...formData,
-                                                        specifications: {
-                                                            ...formData.specifications,
-                                                            [key]: e.target.value
-                                                        }
-                                                    });
+                                                    const newSpecs = [...formData.specifications];
+                                                    newSpecs[index] = { ...newSpecs[index], value: e.target.value };
+                                                    setFormData({ ...formData, specifications: newSpecs });
                                                 }}
                                             />
                                             <button
                                                 type="button"
                                                 className={styles.removeSpecBtn}
                                                 onClick={() => {
-                                                    const newSpecs = { ...formData.specifications };
-                                                    delete newSpecs[key];
+                                                    const newSpecs = formData.specifications.filter((_, i) => i !== index);
                                                     setFormData({ ...formData, specifications: newSpecs });
                                                 }}
                                                 title="Remove specification"
@@ -528,13 +579,12 @@ export default function AdminProductsPage() {
                                         type="button"
                                         className={styles.addSpecBtn}
                                         onClick={() => {
-                                            const newKey = `Spec ${Object.keys(formData.specifications).length + 1}`;
                                             setFormData({
                                                 ...formData,
-                                                specifications: {
+                                                specifications: [
                                                     ...formData.specifications,
-                                                    [newKey]: ''
-                                                }
+                                                    { key: '', value: '' }
+                                                ]
                                             });
                                         }}
                                     >

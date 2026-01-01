@@ -96,3 +96,41 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
 
     return { valid: true };
 }
+
+/**
+ * Delete an image from Digital Ocean Spaces
+ * @param url - The public URL of the image to delete
+ * @returns Whether the deletion was successful
+ */
+export async function deleteImage(url: string): Promise<boolean> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenantId') || 'default' : 'default';
+
+    if (!token) {
+        console.warn('No token for image deletion');
+        return false;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/admin/upload/file`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'x-tenant-id': tenantId,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ url }),
+        });
+
+        if (!response.ok) {
+            console.error('Failed to delete image:', response.status);
+            return false;
+        }
+
+        const { success } = await response.json();
+        return success;
+    } catch (error) {
+        console.error('Error deleting image:', error);
+        return false;
+    }
+}

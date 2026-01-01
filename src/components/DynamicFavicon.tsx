@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 
 /**
@@ -10,48 +10,78 @@ import { useTheme } from '@/context/ThemeContext';
  */
 export default function DynamicFavicon() {
     const { config } = useTheme();
+    const createdLinksRef = useRef<HTMLLinkElement[]>([]);
+    const isMountedRef = useRef(true);
 
     useEffect(() => {
-        if (!config) return;
+        isMountedRef.current = true;
 
-        // Use logoUrl as the favicon (same image)
+        return () => {
+            isMountedRef.current = false;
+            // Clean up only the links we created
+            createdLinksRef.current.forEach(link => {
+                try {
+                    if (link.parentNode) {
+                        link.parentNode.removeChild(link);
+                    }
+                } catch (e) {
+                    // Ignore errors during cleanup
+                }
+            });
+            createdLinksRef.current = [];
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!config || !isMountedRef.current) return;
+
+        // Use logoUrl as the favicon
         const faviconUrl = config.logoUrl;
 
         if (!faviconUrl) return;
 
-        // Remove all existing favicon links to avoid conflicts
-        const existingFavicons = document.querySelectorAll<HTMLLinkElement>(
-            'link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]'
-        );
-        existingFavicons.forEach(link => link.remove());
-
-        // Create new favicon link with cache-busting timestamp
-        const createFaviconLink = (rel: string, href: string) => {
-            const link = document.createElement('link');
-            link.rel = rel;
-            link.href = href;
-            // Add type based on URL extension
-            if (href.includes('.svg')) {
-                link.type = 'image/svg+xml';
-            } else if (href.includes('.png')) {
-                link.type = 'image/png';
-            } else if (href.includes('.ico')) {
-                link.type = 'image/x-icon';
-            } else {
-                // Default for most image URLs (jpg, webp, etc.)
-                link.type = 'image/png';
+        // Clean up previously created links
+        createdLinksRef.current.forEach(link => {
+            try {
+                if (link.parentNode) {
+                    link.parentNode.removeChild(link);
+                }
+            } catch (e) {
+                // Ignore errors
             }
-            document.head.appendChild(link);
+        });
+        createdLinksRef.current = [];
+
+        // Create new favicon link
+        const createFaviconLink = (rel: string, href: string) => {
+            try {
+                const link = document.createElement('link');
+                link.rel = rel;
+                link.href = href;
+                // Add type based on URL extension
+                if (href.includes('.svg')) {
+                    link.type = 'image/svg+xml';
+                } else if (href.includes('.png')) {
+                    link.type = 'image/png';
+                } else if (href.includes('.ico')) {
+                    link.type = 'image/x-icon';
+                } else {
+                    link.type = 'image/png';
+                }
+                document.head.appendChild(link);
+                createdLinksRef.current.push(link);
+            } catch (e) {
+                console.error('Error creating favicon link:', e);
+            }
         };
 
-        // Add cache-busting parameter to force refresh
+        // Add cache-busting parameter
         const cacheBustedUrl = faviconUrl.includes('?')
             ? `${faviconUrl}&v=${Date.now()}`
             : `${faviconUrl}?v=${Date.now()}`;
 
         // Create multiple favicon references for cross-browser support
         createFaviconLink('icon', cacheBustedUrl);
-        createFaviconLink('shortcut icon', cacheBustedUrl);
         createFaviconLink('apple-touch-icon', cacheBustedUrl);
 
     }, [config?.logoUrl]);

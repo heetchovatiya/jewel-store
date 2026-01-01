@@ -400,6 +400,73 @@
     margin-top: var(--space-xs);
 }
 
+/* Hover Image Selection */
+.imageActions {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.imageThumb:hover .imageActions {
+    opacity: 1;
+}
+
+.hoverBadgeBtn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(212, 175, 55, 0.9);
+    color: #000;
+    border: none;
+    border-radius: 50%;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    padding: 0;
+}
+
+.hoverBadgeBtn:hover {
+    background: var(--primary);
+    transform: scale(1.1);
+}
+
+.hoverBadgeBtn.active {
+    background: var(--primary);
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+}
+
+.hoverImageSelected {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.3);
+}
+
+.hoverLabel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 4px;
+    background: rgba(212, 175, 55, 0.9);
+    color: #000;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Adjust removeImageBtn when inside imageActions */
+.imageActions .removeImageBtn {
+    position: static;
+    opacity: 1;
+}
+
 .loadingInventory {
     padding: var(--space-md);
     background: rgba(212, 175, 55, 0.05);
