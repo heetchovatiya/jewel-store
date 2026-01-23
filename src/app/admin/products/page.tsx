@@ -554,7 +554,7 @@ export default function AdminProductsPage() {
                                             <input
                                                 type="text"
                                                 className="input"
-                                                placeholder="Value (e.g., 925 Silver)"
+                                                placeholder="Value (e.g., 916 Gold)"
                                                 value={spec.value}
                                                 onChange={(e) => {
                                                     const newSpecs = [...formData.specifications];

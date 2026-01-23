@@ -183,8 +183,8 @@ export default function ProductDetailPage() {
                                         </svg>
                                     </div>
                                     <div className={styles.infoContent}>
-                                        <h4>925 Sterling Silver</h4>
-                                        <p>Hallmarked authentic silver with 92.5% purity certification</p>
+                                        <h4>916 Hallmarked Gold</h4>
+                                        <p>BIS certified authentic gold with 91.6% purity (22 Karat)</p>
                                     </div>
                                 </div>
                                 <div className={styles.infoCard}>
