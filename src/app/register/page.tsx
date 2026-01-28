@@ -23,6 +23,7 @@ export default function RegisterPage() {
         if (password !== confirmPassword) {
             setError('Passwords do not match');
             return;
+            
         }
 
         if (password.length < 6) {
