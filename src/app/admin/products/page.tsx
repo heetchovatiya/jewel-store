@@ -32,6 +32,7 @@ export default function AdminProductsPage() {
         price: 0,
         category: '',
         images: [] as string[],
+        videos: [] as string[],
         hoverImageIndex: null as number | null,
         stock: 0,
         sku: '',
@@ -43,7 +44,9 @@ export default function AdminProductsPage() {
 
     // Upload states
     const [uploadingImage, setUploadingImage] = useState(false);
+    const [uploadingVideo, setUploadingVideo] = useState(false);
     const productImageInputRef = useRef<HTMLInputElement>(null);
+    const productVideoInputRef = useRef<HTMLInputElement>(null);
 
     // Get categories from store config ONLY (no fallbacks)
     const categories: Category[] = (config?.categories || []).sort((a: Category, b: Category) => a.order - b.order);
@@ -87,6 +90,7 @@ export default function AdminProductsPage() {
                     price: productWithInventory.price,
                     category: productWithInventory.category,
                     images: Array.isArray(productWithInventory.images) ? productWithInventory.images : [],
+                    videos: Array.isArray(productWithInventory.videos) ? productWithInventory.videos : [],
                     hoverImageIndex: productWithInventory.hoverImageIndex ?? null,
                     stock: productWithInventory.inventory?.stock || 0,
                     sku: productWithInventory.inventory?.sku || '',
@@ -103,6 +107,7 @@ export default function AdminProductsPage() {
                     price: product.price,
                     category: product.category,
                     images: Array.isArray(product.images) ? product.images : [],
+                    videos: Array.isArray(product.videos) ? product.videos : [],
                     hoverImageIndex: product.hoverImageIndex ?? null,
                     stock: 0,
                     sku: '',
@@ -121,6 +126,7 @@ export default function AdminProductsPage() {
                 price: 0,
                 category: categories[0]?.slug || '',
                 images: [],
+                videos: [],
                 hoverImageIndex: null,
                 stock: 10,
                 sku: '',
@@ -158,6 +164,7 @@ export default function AdminProductsPage() {
                 price: formData.price,
                 category: formData.category,
                 images: formData.images,
+                videos: formData.videos,
                 isFeatured: formData.isFeatured,
                 specifications: cleanSpecs,
             };
@@ -246,6 +253,37 @@ export default function AdminProductsPage() {
         } finally {
             setUploadingImage(false);
             if (productImageInputRef.current) productImageInputRef.current.value = '';
+        }
+    };
+
+    // Lazy import for uploadVideo since we added it to the file but not imported it yet
+    const handleProductVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Note: You need to import validateVideoFile and uploadVideo from '@/lib/upload'
+        // Since we can't change imports easily in this chunk, assuming they are available or we'll add them
+        const { validateVideoFile, uploadVideo } = await import('@/lib/upload');
+
+        const validation = validateVideoFile(file);
+        if (!validation.valid) {
+            setError(validation.error || 'Invalid video file');
+            return;
+        }
+
+        setUploadingVideo(true);
+        setError('');
+        try {
+            const url = await uploadVideo(file, { folder: 'products' });
+            setFormData(prev => ({
+                ...prev,
+                videos: [...(prev.videos || []), url],
+            }));
+        } catch (err: any) {
+            setError(err.message || 'Failed to upload video');
+        } finally {
+            setUploadingVideo(false);
+            if (productVideoInputRef.current) productVideoInputRef.current.value = '';
         }
     };
 
@@ -516,6 +554,57 @@ export default function AdminProductsPage() {
                                 {formData.images.length > 0 && (
                                     <span className={styles.imageCount}>
                                         {formData.images.length} image{formData.images.length !== 1 ? 's' : ''} • Click ★ to set hover image • Click × to remove
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className={styles.formGroup}>
+                                <label className="label">Product Videos</label>
+                                <div className={styles.imageGallery}>
+                                    {(formData.videos || []).map((url, index) => (
+                                        <div key={index} className={styles.imageThumb} style={{ width: 120 }}>
+                                            <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <div className={styles.imageActions}>
+                                                <button
+                                                    type="button"
+                                                    className={styles.removeImageBtn}
+                                                    onClick={() => {
+                                                        const newVideos = [...(formData.videos || [])];
+                                                        const videoUrl = newVideos[index];
+                                                        newVideos.splice(index, 1);
+                                                        setFormData({ ...formData, videos: newVideos });
+
+                                                        // Attempt to delete from storage
+                                                        if (videoUrl && videoUrl.includes('digitaloceanspaces.com')) {
+                                                            deleteImage(videoUrl).catch(console.error);
+                                                        }
+                                                    }}
+                                                    title="Remove video"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <label className={`${styles.uploadPlaceholder} ${uploadingVideo ? styles.disabled : ''}`}>
+                                        <input
+                                            type="file"
+                                            accept="video/*"
+                                            ref={productVideoInputRef}
+                                            onChange={handleProductVideoUpload}
+                                            disabled={uploadingVideo}
+                                            style={{ display: 'none' }}
+                                        />
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                        </svg>
+                                        <span>{uploadingVideo ? 'Uploading...' : 'Add Video'}</span>
+                                    </label>
+                                </div>
+                                {(formData.videos || []).length > 0 && (
+                                    <span className={styles.imageCount}>
+                                        {(formData.videos || []).length} video{(formData.videos || []).length !== 1 ? 's' : ''}
                                     </span>
                                 )}
                             </div>

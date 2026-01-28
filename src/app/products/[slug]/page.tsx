@@ -6,6 +6,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
+import { getCdnOptimizedUrl, isVideoUrl } from '@/lib/upload';
 import styles from './page.module.css';
 
 export default function ProductDetailPage() {
@@ -17,7 +18,7 @@ export default function ProductDetailPage() {
 
     const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [selectedImage, setSelectedImage] = useState(0);
+    const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [showLeadModal, setShowLeadModal] = useState(false);
     const [leadForm, setLeadForm] = useState({ name: '', phone: '' });
@@ -79,6 +80,20 @@ export default function ProductDetailPage() {
 
     const inStock = product.inventory?.inStock ?? true;
 
+    // Combine images and videos into a single media array
+    const media = [
+        ...(product.images || []),
+        ...(product.videos || [])
+    ];
+
+    // If no media, use placeholder
+    if (media.length === 0) {
+        media.push('/placeholder-jewelry.svg');
+    }
+
+    const currentMedia = media[selectedMediaIndex] || media[0];
+    const isVideo = isVideoUrl(currentMedia);
+
     return (
         <div className={styles.productPage}>
             <div className="container">
@@ -86,22 +101,55 @@ export default function ProductDetailPage() {
                     {/* Images */}
                     <div className={styles.gallery}>
                         <div className={styles.mainImage}>
-                            <img
-                                src={product.images?.[selectedImage] || '/placeholder-jewelry.svg'}
-                                alt={product.title}
-                            />
+                            {isVideo ? (
+                                <video
+                                    src={currentMedia}
+                                    controls
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                            ) : (
+                                <img
+                                    src={getCdnOptimizedUrl(currentMedia, { width: 800 })}
+                                    alt={product.title}
+                                />
+                            )}
                         </div>
-                        {product.images?.length > 1 && (
+                        {media.length > 1 && (
                             <div className={styles.thumbnails}>
-                                {product.images.map((img: string, idx: number) => (
-                                    <button
-                                        key={idx}
-                                        className={`${styles.thumbnail} ${idx === selectedImage ? styles.active : ''}`}
-                                        onClick={() => setSelectedImage(idx)}
-                                    >
-                                        <img src={img} alt={`${product.title} ${idx + 1}`} />
-                                    </button>
-                                ))}
+                                {media.map((url: string, idx: number) => {
+                                    const isItemVideo = isVideoUrl(url);
+                                    return (
+                                        <button
+                                            key={idx}
+                                            className={`${styles.thumbnail} ${idx === selectedMediaIndex ? styles.active : ''}`}
+                                            onClick={() => setSelectedMediaIndex(idx)}
+                                        >
+                                            {isItemVideo ? (
+                                                <video
+                                                    src={`${url}#t=0.001`}
+                                                    muted
+                                                    playsInline
+                                                    preload="metadata"
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        objectFit: 'cover',
+                                                        pointerEvents: 'none' // Prevent interaction with the thumbnail video itself
+                                                    }}
+                                                />
+                                            ) : (
+                                                <img
+                                                    src={getCdnOptimizedUrl(url, { width: 150 })}
+                                                    alt={`${product.title} ${idx + 1}`}
+                                                />
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

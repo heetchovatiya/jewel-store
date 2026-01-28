@@ -22,6 +22,7 @@
 .gallery {
     position: sticky;
     top: 100px;
+    padding: var(--space-lg);
 }
 
 .mainImage {
@@ -32,7 +33,8 @@
     margin-bottom: var(--space-md);
 }
 
-.mainImage img {
+.mainImage img,
+.mainImage video {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -41,6 +43,7 @@
 .thumbnails {
     display: flex;
     gap: var(--space-sm);
+    padding: var(--space-sm) 0;
 }
 
 .thumbnail {

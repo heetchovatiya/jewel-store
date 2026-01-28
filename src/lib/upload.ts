@@ -28,9 +28,22 @@ export async function uploadImage(
         throw new Error('Authentication required');
     }
 
+    // Check if file is a video - skip compression for videos
+    const isVideo = file.type.startsWith('video/');
+    let fileToUpload = file;
+
+    if (!isVideo) {
+        // Compress image before upload
+        console.log(`Original file: ${file.name}, size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+        fileToUpload = await compressImage(file, 20); // 20MB limit
+        console.log(`Ready to upload: ${fileToUpload.name}, size: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
+    } else {
+        console.log(`Uploading video: ${file.name}, size: ${(file.size / 1024 / 1024).toFixed(2)}MB (no compression)`);
+    }
+
     // Create FormData for multipart upload
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', fileToUpload);
     formData.append('folder', options.folder);
 
     // Upload file to backend which proxies to DO Spaces
@@ -80,10 +93,94 @@ export async function uploadImages(
 }
 
 /**
+ * Compress an image file to reduce size and optimize format
+ * @param file - The image file to compress
+ * @param maxSizeMB - Maximum size in MB (default 2)
+ * @returns Compressed image as a File object
+ */
+async function compressImage(file: File, maxSizeMB: number = 2): Promise<File> {
+    const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+    // If already small enough and is WebP, return as-is
+    if (file.size <= maxSizeBytes && file.type === 'image/webp') {
+        return file;
+    }
+
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            img.src = e.target?.result as string;
+        };
+
+        reader.onerror = () => reject(new Error('Failed to read image file'));
+
+        img.onload = async () => {
+            try {
+                // Calculate new dimensions (max width 1920px)
+                const maxWidth = 1920;
+                let { width, height } = img;
+
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+
+                // Create canvas and draw resized image
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+
+                if (!ctx) {
+                    reject(new Error('Failed to get canvas context'));
+                    return;
+                }
+
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Try different quality levels to get under size limit
+                const qualities = [0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6];
+
+                for (const quality of qualities) {
+                    const blob = await new Promise<Blob | null>((res) => {
+                        canvas.toBlob((b) => res(b), 'image/webp', quality);
+                    });
+
+                    if (!blob) continue;
+
+                    if (blob.size <= maxSizeBytes) {
+                        // Success! Convert blob to file
+                        const compressedFile = new File(
+                            [blob],
+                            file.name.replace(/\.[^/.]+$/, '.webp'),
+                            { type: 'image/webp' }
+                        );
+                        console.log(`Compressed ${file.name} from ${(file.size / 1024 / 1024).toFixed(2)}MB to ${(blob.size / 1024 / 1024).toFixed(2)}MB (quality: ${quality})`);
+                        resolve(compressedFile);
+                        return;
+                    }
+                }
+
+                // If still too large, reject
+                reject(new Error(`Unable to compress image to under ${maxSizeMB}MB. Please use a smaller image or compress it manually.`));
+            } catch (err) {
+                reject(err);
+            }
+        };
+
+        img.onerror = () => reject(new Error('Failed to load image'));
+
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
  * Validate file before upload
  */
 export function validateImageFile(file: File): { valid: boolean; error?: string } {
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 100 * 1024 * 1024; // 100MB before compression
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
     if (!allowedTypes.includes(file.type)) {
@@ -91,7 +188,7 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
     }
 
     if (file.size > maxSize) {
-        return { valid: false, error: 'File size must be less than 10MB' };
+        return { valid: false, error: 'File size must be less than 100MB (will be compressed automatically)' };
     }
 
     return { valid: true };
@@ -133,4 +230,77 @@ export async function deleteImage(url: string): Promise<boolean> {
         console.error('Error deleting image:', error);
         return false;
     }
+}
+
+/**
+ * Validate video file before upload
+ */
+export function validateVideoFile(file: File): { valid: boolean; error?: string } {
+    const maxSize = 20 * 1024 * 1024; // 20MB
+    const allowedTypes = [
+        'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+        return { valid: false, error: 'Only MP4, WebM, MOV, and AVI videos are allowed' };
+    }
+
+    if (file.size > maxSize) {
+        return { valid: false, error: 'Video size must be less than 20MB. Please compress your video before uploading.' };
+    }
+
+    return { valid: true };
+}
+
+/**
+ * Upload a video file
+ */
+export async function uploadVideo(
+    file: File,
+    options: UploadOptions
+): Promise<string> {
+    const validation = validateVideoFile(file);
+    if (!validation.valid) {
+        throw new Error(validation.error);
+    }
+    return uploadImage(file, options); // Reuse uploadImage as it handles the backend proxy
+}
+
+/**
+ * Get optimized CDN URL for images
+ * @param url - The original image URL
+ * @param options - Optimization options (width, quality, format)
+ * @returns - The optimized URL
+ */
+export function getCdnOptimizedUrl(
+    url: string,
+    options: { width?: number; quality?: number; format?: 'webp' | 'auto' } = {}
+): string {
+    if (!url || typeof url !== 'string') return '';
+
+    // If not a DO Spaces CDN URL or is a video, return as-is
+    if (!url.includes('digitaloceanspaces.com') || isVideoUrl(url)) return url;
+
+    const { width, quality = 85, format = 'webp' } = options;
+    const params = new URLSearchParams();
+
+    if (width) params.set('width', width.toString());
+    params.set('quality', quality.toString());
+    if (format === 'webp') params.set('format', 'webp');
+
+    // Check if URL already has query params
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}${params.toString()}`;
+}
+
+/**
+ * Check if a URL points to a video
+ */
+export function isVideoUrl(url: string): boolean {
+    if (!url) return false;
+    const lowerUrl = url.toLowerCase();
+    return lowerUrl.endsWith('.mp4') ||
+        lowerUrl.endsWith('.webm') ||
+        lowerUrl.endsWith('.mov') ||
+        lowerUrl.endsWith('.avi');
 }
