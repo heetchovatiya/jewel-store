@@ -137,7 +137,6 @@ export default function AdminCategoriesPage() {
         setUploadingCategoryImage(true);
         try {
             const url = await uploadImage(file, { folder: 'categories' });
-            // Use functional setState to avoid stale closure issue
             setNewCategory(prev => ({ ...prev, image: url }));
         } catch (err: any) {
             setUploadError(err.message || 'Failed to upload image');
@@ -145,6 +144,38 @@ export default function AdminCategoriesPage() {
             setUploadingCategoryImage(false);
             if (categoryImageInputRef.current) categoryImageInputRef.current.value = '';
         }
+    };
+
+    const handleCardImageUpload = async (slug: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const validation = validateImageFile(file);
+        if (!validation.valid) {
+            alert(validation.error || 'Invalid file');
+            return;
+        }
+
+        try {
+            const url = await uploadImage(file, { folder: 'categories' });
+            updateCategoryImage(slug, url);
+        } catch (err: any) {
+            alert(err.message || 'Failed to upload image');
+        } finally {
+            e.target.value = '';
+        }
+    };
+
+    const updateCategoryImage = (slug: string, url: string) => {
+        setCategories(prev => prev.map(c =>
+            c.slug === slug ? { ...c, image: url } : c
+        ));
+    };
+
+    const removeCategoryImage = (slug: string) => {
+        setCategories(prev => prev.map(c =>
+            c.slug === slug ? { ...c, image: undefined } : c
+        ));
     };
 
     if (authLoading || loading) {
@@ -232,8 +263,51 @@ export default function AdminCategoriesPage() {
                                 </button>
                             </div>
 
+                            <div className={styles.categoryThumbnail}>
+                                {category.image ? (
+                                    <div className={styles.thumbnailWrapper}>
+                                        <img src={category.image} alt={category.name} />
+                                        <button
+                                            className={styles.removeThumbnailBtn}
+                                            onClick={() => removeCategoryImage(category.slug)}
+                                            title="Remove image"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className={styles.thumbnailPlaceholder}>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handleCardImageUpload(category.slug, e)}
+                                            style={{ display: 'none' }}
+                                        />
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                            <polyline points="21 15 16 10 5 21"></polyline>
+                                        </svg>
+                                        <span>Add Image</span>
+                                    </label>
+                                )}
+                            </div>
+
                             <div className={styles.categoryInfo}>
-                                <span className={styles.categoryName}>{category.name}</span>
+                                <div className={styles.nameWrapper}>
+                                    <span className={styles.categoryName}>{category.name}</span>
+                                    {category.image && (
+                                        <label className={styles.changeImageLink}>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => handleCardImageUpload(category.slug, e)}
+                                                style={{ display: 'none' }}
+                                            />
+                                            Change Image
+                                        </label>
+                                    )}
+                                </div>
                                 <span className={styles.categorySlug}>/{category.slug}</span>
                             </div>
 

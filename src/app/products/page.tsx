@@ -60,27 +60,16 @@ function ProductsContent() {
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    // Fetch when filters change (not page)
+    // Fetch products when page, category, sort, or search changes
     useEffect(() => {
-        shouldResetProductsRef.current = true;
-        setPage(1);
-    }, [selectedCategory, sortBy, debouncedSearch]);
-
-    // Fetch products when page changes or initial load
-    useEffect(() => {
-        if (page === 1 || !isMobile) {
-            // Initial load or desktop pagination - fresh fetch
+        if (page === 1 || !isMobile || shouldResetProductsRef.current) {
+            // Initial load, desktop pagination, or filter/search reset
             fetchProducts();
         } else if (isMobile && page > 1) {
             // Mobile infinite scroll - append
             fetchProducts(true);
         }
-    }, [page]);
-
-    // Also fetch on initial mount
-    useEffect(() => {
-        fetchProducts();
-    }, []);
+    }, [page, selectedCategory, sortBy, debouncedSearch, isMobile]);
 
     const fetchCategories = async () => {
         try {
@@ -195,6 +184,7 @@ function ProductsContent() {
                             value={selectedCategory}
                             onChange={(e) => {
                                 setSelectedCategory(e.target.value);
+                                shouldResetProductsRef.current = true;
                                 setPage(1);
                             }}
                             className={`input ${styles.select}`}
@@ -209,7 +199,11 @@ function ProductsContent() {
                     {/* Sort */}
                     <select
                         value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
+                        onChange={(e) => {
+                            setSortBy(e.target.value);
+                            shouldResetProductsRef.current = true;
+                            setPage(1);
+                        }}
                         className={`input ${styles.select}`}
                     >
                         <option value="-createdAt">Newest First</option>
