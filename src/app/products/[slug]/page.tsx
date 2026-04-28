@@ -200,7 +200,7 @@ export default function ProductDetailPage() {
                                 onClick={handleAddToCart}
                                 disabled={!inStock || cartLoading}
                             >
-                                {cartLoading ? 'Adding...' : 'Add to Cart'}
+                                {!inStock ? 'Out of Stock' : cartLoading ? 'Adding...' : 'Add to Cart'}
                             </button>
                         </div>
 

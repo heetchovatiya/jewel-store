@@ -32,6 +32,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     const discount = product.compareAtPrice
         ? Math.round((1 - product.price / product.compareAtPrice) * 100)
         : 0;
+    const inStock = product.inventory?.inStock ?? false;
 
     const handleAddToCart = async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -42,6 +43,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             return;
         }
 
+        if (!inStock) return;
         await addToCart(product._id, 1);
     };
 
@@ -65,16 +67,16 @@ export default function ProductCard({ product }: ProductCardProps) {
                 {discount > 0 && (
                     <span className={styles.discountBadge}>-{discount}%</span>
                 )}
-                {product.inventory && !product.inventory.inStock && (
+                {!inStock && (
                     <span className={styles.outOfStock}>Out of Stock</span>
                 )}
                 <div className={styles.overlay}>
                     <button
                         className={styles.addBtn}
                         onClick={handleAddToCart}
-                        disabled={loading || (product.inventory && !product.inventory.inStock)}
+                        disabled={loading || !inStock}
                     >
-                        {loading ? 'Adding...' : 'Add to Cart'}
+                        {!inStock ? 'Out of Stock' : loading ? 'Adding...' : 'Add to Cart'}
                     </button>
                 </div>
             </div>

@@ -9,7 +9,7 @@ import styles from './page.module.css';
 export default function LoginPage() {
     const router = useRouter();
     const { login } = useAuth();
-    const [email, setEmail] = useState('');
+    const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            await login(email, password);
+            await login(identifier, password);
             router.push('/');
         } catch (err: any) {
             setError(err.message || 'Invalid credentials');
@@ -41,13 +41,13 @@ export default function LoginPage() {
 
                 <form onSubmit={handleSubmit} className={styles.form}>
                     <div className={styles.formGroup}>
-                        <label className="label">Email</label>
+                        <label className="label">Email or Phone</label>
                         <input
-                            type="email"
+                            type="text"
                             className="input"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="your@email.com"
+                            value={identifier}
+                            onChange={(e) => setIdentifier(e.target.value)}
+                            placeholder="your@email.com or 9876543210"
                             required
                         />
                     </div>

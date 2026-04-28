@@ -1,12 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import styles from './page.module.css';
+
+declare global {
+    interface Window {
+        Razorpay: any;
+    }
+}
 
 export default function CheckoutPage() {
     const router = useRouter();
@@ -16,8 +22,10 @@ export default function CheckoutPage() {
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState(false);
-    const [orderNumber, setOrderNumber] = useState('');
+    const [selectedAddressIndex, setSelectedAddressIndex] = useState(0);
+    const [pincodeLoading, setPincodeLoading] = useState(false);
+    const [pincodeError, setPincodeError] = useState('');
+    const lastPincodeLookupRef = useRef('');
 
     const [address, setAddress] = useState({
         fullName: '',
@@ -34,12 +42,14 @@ export default function CheckoutPage() {
             router.push('/login');
             return;
         }
-        if (items.length === 0 && !success) {
+        if (items.length === 0) {
             router.push('/cart');
         }
-        // Pre-fill with user's default address if available
+        // Pre-fill with first saved address (or default when available)
         if (user?.addresses?.length) {
             const defaultAddr = user.addresses.find((a: any) => a.isDefault) || user.addresses[0];
+            const index = user.addresses.findIndex((a: any) => a === defaultAddr);
+            setSelectedAddressIndex(index >= 0 ? index : 0);
             setAddress({
                 fullName: defaultAddr.fullName || user.name || '',
                 phone: defaultAddr.phone || user.phone || '',
@@ -49,8 +59,79 @@ export default function CheckoutPage() {
                 state: defaultAddr.state || '',
                 pincode: defaultAddr.pincode || '',
             });
+        } else {
+            setAddress((prev) => ({
+                ...prev,
+                fullName: user?.name || prev.fullName,
+                phone: user?.phone || prev.phone,
+            }));
         }
-    }, [isAuthenticated, items, user]);
+    }, [isAuthenticated, items, user, router]);
+
+    const applySavedAddress = (index: number) => {
+        if (!user?.addresses?.[index]) return;
+        const saved = user.addresses[index];
+        setSelectedAddressIndex(index);
+        setAddress({
+            fullName: saved.fullName || user.name || '',
+            phone: saved.phone || user.phone || '',
+            addressLine1: saved.addressLine1 || '',
+            addressLine2: saved.addressLine2 || '',
+            city: saved.city || '',
+            state: saved.state || '',
+            pincode: saved.pincode || '',
+        });
+    };
+
+    const loadRazorpayScript = async (): Promise<boolean> => {
+        if (window.Razorpay) return true;
+
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.async = true;
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+        });
+    };
+
+    const handlePincodeChange = async (value: string) => {
+        const cleaned = value.replace(/\D/g, '').slice(0, 6);
+        setAddress((prev) => ({ ...prev, pincode: cleaned }));
+        setPincodeError('');
+
+        if (cleaned.length !== 6) {
+            setPincodeLoading(false);
+            return;
+        }
+
+        try {
+            setPincodeLoading(true);
+            lastPincodeLookupRef.current = cleaned;
+            const response = await fetch(`https://api.postalpincode.in/pincode/${cleaned}`);
+            const data = await response.json();
+
+            if (lastPincodeLookupRef.current !== cleaned) {
+                return;
+            }
+
+            if (data?.[0]?.Status === 'Success' && Array.isArray(data?.[0]?.PostOffice) && data[0].PostOffice.length > 0) {
+                const details = data[0].PostOffice[0];
+                setAddress((prev) => ({
+                    ...prev,
+                    city: details.District || prev.city,
+                    state: details.State || prev.state,
+                }));
+            } else {
+                setPincodeError('We could not find this PIN code. Please check and re-enter.');
+            }
+        } catch {
+            setPincodeError('Unable to verify PIN code right now. Please enter city and state manually.');
+        } finally {
+            setPincodeLoading(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -58,34 +139,54 @@ export default function CheckoutPage() {
         setLoading(true);
 
         try {
-            const order = await api.createOrder(address);
-            setOrderNumber(order.orderNumber);
-            setSuccess(true);
-            clearCart();
+            const sdkLoaded = await loadRazorpayScript();
+            if (!sdkLoaded) {
+                throw new Error('Unable to load Razorpay. Please check your internet and try again.');
+            }
+
+            const payment = await api.initiatePayment(address);
+            const options = {
+                key: payment.keyId,
+                amount: payment.amount,
+                currency: 'INR',
+                name: 'Your Jewel Store',
+                description: `Order ${payment.orderNumber}`,
+                order_id: payment.razorpayOrderId,
+                handler: async (response: any) => {
+                    try {
+                        const verified = await api.verifyPayment({
+                            razorpayOrderId: response.razorpay_order_id,
+                            razorpayPaymentId: response.razorpay_payment_id,
+                            razorpaySignature: response.razorpay_signature,
+                        });
+
+                        await clearCart();
+                        router.push('/account/orders');
+                    } catch (verifyError: any) {
+                        setError(verifyError.message || 'Payment verification failed. Please contact support.');
+                    }
+                },
+                prefill: {
+                    name: user?.name || address.fullName,
+                    contact: address.phone,
+                    email: user?.email || '',
+                },
+                theme: { color: '#d4af37' },
+                modal: {
+                    ondismiss: () => {
+                        setLoading(false);
+                    },
+                },
+            };
+
+            const razorpay = new window.Razorpay(options);
+            razorpay.open();
         } catch (err: any) {
-            setError(err.message || 'Failed to place order');
+            setError(err.message || 'Failed to initiate payment');
         } finally {
             setLoading(false);
         }
     };
-
-    if (success) {
-        return (
-            <div className={styles.success}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-                <h1>Order Placed Successfully!</h1>
-                <p className={styles.orderNumber}>Order #: {orderNumber}</p>
-                <p>Thank you for your order. We will contact you shortly.</p>
-                <div className={styles.successActions}>
-                    <a href="/account/orders" className="btn btn-primary">View Orders</a>
-                    <a href="/products" className="btn btn-secondary">Continue Shopping</a>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className={styles.checkoutPage}>
@@ -97,6 +198,22 @@ export default function CheckoutPage() {
                 <div className={styles.checkoutLayout}>
                     <form onSubmit={handleSubmit} className={styles.addressForm}>
                         <h2>Shipping Address</h2>
+                        {user?.addresses?.length ? (
+                            <div className={styles.formGroup}>
+                                <label className="label">Saved Addresses</label>
+                                <select
+                                    className="input"
+                                    value={selectedAddressIndex}
+                                    onChange={(e) => applySavedAddress(Number(e.target.value))}
+                                >
+                                    {user.addresses.map((savedAddress: any, index: number) => (
+                                        <option key={`${savedAddress.addressLine1}-${index}`} value={index}>
+                                            {savedAddress.fullName} - {savedAddress.addressLine1}, {savedAddress.city}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : null}
 
                         <div className={styles.formGrid}>
                             <div className={styles.formGroup}>
@@ -174,14 +291,18 @@ export default function CheckoutPage() {
                                     type="text"
                                     className="input"
                                     value={address.pincode}
-                                    onChange={(e) => setAddress({ ...address, pincode: e.target.value })}
+                                    onChange={(e) => handlePincodeChange(e.target.value)}
+                                    inputMode="numeric"
+                                    maxLength={6}
                                     required
                                 />
+                                {pincodeLoading ? <small>Fetching city/state from PIN code...</small> : null}
+                                {pincodeError ? <small style={{ color: 'var(--error)' }}>{pincodeError}</small> : null}
                             </div>
                         </div>
 
                         <button type="submit" className="btn btn-primary" disabled={loading}>
-                            {loading ? 'Placing Order...' : 'Place Order'}
+                            {loading ? 'Starting Payment...' : 'Pay Securely'}
                         </button>
                     </form>
 

@@ -147,7 +147,7 @@ export default function AdminDashboard() {
                                             {new Date(order.createdAt).toLocaleDateString()}
                                         </span>
                                     </div>
-                                    <span className={`badge badge-${order.status === 'pending' ? 'warning' : order.status === 'delivered' ? 'success' : 'primary'}`}>
+                                    <span className={`badge badge-${order.status === 'payment_failed' || order.status === 'cancelled' ? 'error' : order.status === 'payment_pending' || order.status === 'pending' ? 'warning' : order.status === 'delivered' ? 'success' : 'primary'}`}>
                                         {order.status}
                                     </span>
                                     <span className={styles.orderTotal}>{formatPrice(order.total)}</span>

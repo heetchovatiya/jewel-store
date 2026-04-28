@@ -22,7 +22,7 @@ interface Order {
     orderNumber: string;
     items: OrderItem[];
     total: number;
-    status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+    status: 'payment_pending' | 'payment_failed' | 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
     shippingAddress: {
         fullName: string;
         addressLine1: string;
@@ -34,6 +34,8 @@ interface Order {
 }
 
 const statusColors: Record<string, string> = {
+    payment_pending: 'badge-warning',
+    payment_failed: 'badge-error',
     pending: 'badge-warning',
     confirmed: 'badge-primary',
     processing: 'badge-primary',
@@ -43,6 +45,8 @@ const statusColors: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
+    payment_pending: 'Payment Pending',
+    payment_failed: 'Payment Failed',
     pending: 'Pending',
     confirmed: 'Confirmed',
     processing: 'Processing',

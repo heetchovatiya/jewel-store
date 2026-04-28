@@ -7,7 +7,7 @@ import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
 import styles from './page.module.css';
 
-const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+const ORDER_STATUSES = ['payment_pending', 'payment_failed', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 
 export default function AdminOrdersPage() {
     const router = useRouter();
@@ -101,7 +101,7 @@ export default function AdminOrdersPage() {
                             <span>{order.items?.length || 0} items</span>
                             <span className={styles.total}>{formatPrice(order.total)}</span>
                             <span>
-                                <span className={`badge badge-${order.status === 'pending' ? 'warning' : order.status === 'delivered' ? 'success' : order.status === 'cancelled' ? 'error' : 'primary'}`}>
+                                <span className={`badge badge-${order.status === 'payment_failed' || order.status === 'cancelled' ? 'error' : order.status === 'payment_pending' || order.status === 'pending' ? 'warning' : order.status === 'delivered' ? 'success' : 'primary'}`}>
                                     {order.status}
                                 </span>
                             </span>

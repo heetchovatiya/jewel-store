@@ -60,19 +60,19 @@ class ApiClient {
     }
 
     // Auth
-    async login(email: string, password: string) {
+    async login(identifier: string, password: string) {
         const data = await this.request<{ user: any; token: string }>('/auth/login', {
             method: 'POST',
-            body: { email, password },
+            body: { identifier, password },
         });
         this.setToken(data.token);
         return data;
     }
 
-    async register(email: string, password: string, name: string) {
+    async register(email: string, password: string, name: string, phone: string) {
         const data = await this.request<{ user: any; token: string }>('/auth/register', {
             method: 'POST',
-            body: { email, password, name },
+            body: { email, password, name, phone },
         });
         this.setToken(data.token);
         return data;
@@ -142,6 +142,34 @@ class ApiClient {
             method: 'POST',
             body: { shippingAddress, notes },
         });
+    }
+
+    async initiatePayment(shippingAddress: any): Promise<{
+        orderId: string;
+        razorpayOrderId: string;
+        amount: number;
+        keyId: string;
+        orderNumber: string;
+    }> {
+        return this.request('/payments/initiate', {
+            method: 'POST',
+            body: { shippingAddress },
+        });
+    }
+
+    async verifyPayment(payload: {
+        razorpayOrderId: string;
+        razorpayPaymentId: string;
+        razorpaySignature: string;
+    }): Promise<{ orderId: string; status: string }> {
+        return this.request('/payments/verify', {
+            method: 'POST',
+            body: payload,
+        });
+    }
+
+    async pollOrderStatus(orderId: string): Promise<{ status: string }> {
+        return this.request(`/orders/${orderId}`);
     }
 
     async getOrders() {

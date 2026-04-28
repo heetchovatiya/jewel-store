@@ -10,6 +10,7 @@ export default function RegisterPage() {
     const router = useRouter();
     const { register } = useAuth();
     const [name, setName] = useState('');
+    const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,9 +32,14 @@ export default function RegisterPage() {
             return;
         }
 
+        if (phone.trim().length < 10) {
+            setError('Please enter a valid phone number');
+            return;
+        }
+
         setLoading(true);
         try {
-            await register(email, password, name);
+            await register(email, password, name, phone);
             router.push('/');
         } catch (err: any) {
             setError(err.message || 'Registration failed');
@@ -73,6 +79,18 @@ export default function RegisterPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="your@email.com"
+                            required
+                        />
+                    </div>
+
+                    <div className={styles.formGroup}>
+                        <label className="label">Phone Number</label>
+                        <input
+                            type="tel"
+                            className="input"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="9876543210"
                             required
                         />
                     </div>
