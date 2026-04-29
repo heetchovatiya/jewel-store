@@ -149,7 +149,6 @@ export default function CheckoutPage() {
                 key: payment.keyId,
                 amount: payment.amount,
                 currency: 'INR',
-                name: 'Your Jewel Store',
                 description: `Order ${payment.orderNumber}`,
                 order_id: payment.razorpayOrderId,
                 handler: async (response: any) => {
