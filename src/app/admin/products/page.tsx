@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
 import { uploadImage, validateImageFile, deleteImage } from '@/lib/upload';
-import { BANGLE_SIZES, JEWELRY_COLORS, RING_SIZES } from '@/lib/variants';
+import { BANGLE_SIZES, RING_SIZES } from '@/lib/variants';
 import styles from './page.module.css';
 
 interface VariantFormRow {
@@ -222,20 +222,15 @@ export default function AdminProductsPage() {
         }));
     };
 
-    const addVariantRows = (sizes: string[], colors: string[] = JEWELRY_COLORS.slice(0, 3)) => {
-        const newRows: VariantFormRow[] = [];
-        for (const size of sizes) {
-            for (const color of colors) {
-                newRows.push({
-                    size,
-                    color,
-                    price: formData.price || '',
-                    stock: 5,
-                    sku: '',
-                    image: '',
-                });
-            }
-        }
+    const addVariantRows = (sizes: string[]) => {
+        const newRows: VariantFormRow[] = sizes.map((size) => ({
+            size,
+            color: '',
+            price: formData.price || '',
+            stock: 5,
+            sku: '',
+            image: '',
+        }));
         setFormData(prev => ({
             ...prev,
             hasVariants: true,
@@ -886,8 +881,7 @@ export default function AdminProductsPage() {
                                                 <input
                                                     type="text"
                                                     className="input"
-                                                    placeholder="Gold"
-                                                    list="jewelry-colors"
+                                                    placeholder="e.g. Gold, Rose Gold"
                                                     value={variant.color}
                                                     onChange={(e) => {
                                                         const variants = [...formData.variants];
@@ -946,10 +940,6 @@ export default function AdminProductsPage() {
                                                 </button>
                                             </div>
                                         ))}
-                                        <datalist id="jewelry-colors">
-                                            {JEWELRY_COLORS.map(c => <option key={c} value={c} />)}
-                                        </datalist>
-
                                         {getVariantColors(formData.variants).length > 0 && (
                                             <div className={styles.colorImagesSection}>
                                                 <label className="label">Images by color</label>
