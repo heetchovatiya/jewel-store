@@ -3,23 +3,16 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import api from '@/lib/api';
 import { useAuth } from './AuthContext';
-
-interface CartItem {
-    productId: string;
-    title: string;
-    price: number;
-    image: string;
-    quantity: number;
-}
+import type { CartItem } from '@/types/commerce';
 
 interface CartContextType {
     items: CartItem[];
     total: number;
     itemCount: number;
     loading: boolean;
-    addToCart: (productId: string, quantity?: number) => Promise<void>;
-    updateQuantity: (productId: string, quantity: number) => Promise<void>;
-    removeItem: (productId: string) => Promise<void>;
+    addToCart: (productId: string, quantity?: number, variantId?: string) => Promise<void>;
+    updateQuantity: (lineId: string, quantity: number) => Promise<void>;
+    removeItem: (lineId: string) => Promise<void>;
     clearCart: () => Promise<void>;
     refreshCart: () => Promise<void>;
 }
@@ -68,30 +61,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
         fetchCart();
     }, [isAuthenticated]);
 
-    const addToCart = async (productId: string, quantity = 1) => {
+    const addToCart = async (productId: string, quantity = 1, variantId?: string) => {
         setLoading(true);
         try {
-            await api.addToCart(productId, quantity);
+            await api.addToCart(productId, quantity, variantId);
             await fetchCart();
         } finally {
             setLoading(false);
         }
     };
 
-    const updateQuantity = async (productId: string, quantity: number) => {
+    const updateQuantity = async (lineId: string, quantity: number) => {
         setLoading(true);
         try {
-            await api.updateCartItem(productId, quantity);
+            await api.updateCartItem(lineId, quantity);
             await fetchCart();
         } finally {
             setLoading(false);
         }
     };
 
-    const removeItem = async (productId: string) => {
+    const removeItem = async (lineId: string) => {
         setLoading(true);
         try {
-            await api.removeFromCart(productId);
+            await api.removeFromCart(lineId);
             await fetchCart();
         } finally {
             setLoading(false);

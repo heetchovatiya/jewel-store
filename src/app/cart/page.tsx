@@ -47,24 +47,29 @@ export default function CartPage() {
                 <div className={styles.cartLayout}>
                     <div className={styles.cartItems}>
                         {items.map((item) => (
-                            <div key={item.productId} className={styles.cartItem}>
+                            <div key={item.lineId} className={styles.cartItem}>
                                 <div className={styles.itemImage}>
                                     <img src={item.image || '/placeholder-jewelry.svg'} alt={item.title} />
                                 </div>
                                 <div className={styles.itemDetails}>
                                     <h3>{item.title}</h3>
+                                    {(item.size || item.color) && (
+                                        <p className={styles.itemVariant}>
+                                            {[item.size && `Size ${item.size}`, item.color].filter(Boolean).join(' · ')}
+                                        </p>
+                                    )}
                                     <p className={styles.itemPrice}>{formatPrice(item.price)}</p>
                                 </div>
                                 <div className={styles.itemQuantity}>
                                     <button
-                                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                                        onClick={() => updateQuantity(item.lineId, item.quantity - 1)}
                                         disabled={loading || item.quantity <= 1}
                                     >
                                         −
                                     </button>
                                     <span>{item.quantity}</span>
                                     <button
-                                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                                        onClick={() => updateQuantity(item.lineId, item.quantity + 1)}
                                         disabled={loading}
                                     >
                                         +
@@ -75,7 +80,7 @@ export default function CartPage() {
                                 </div>
                                 <button
                                     className={styles.removeBtn}
-                                    onClick={() => removeItem(item.productId)}
+                                    onClick={() => removeItem(item.lineId)}
                                     disabled={loading}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

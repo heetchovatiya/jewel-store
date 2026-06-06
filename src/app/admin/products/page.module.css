@@ -536,6 +536,70 @@
     border-color: var(--primary);
 }
 
+.colorImagesSection {
+    margin-top: var(--space-lg);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.colorImageGroup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.colorImageLabel {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--primary);
+}
+
+.variantEditor {
+    margin-top: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.variantQuickAdd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.variantTableHeader,
+.variantTableRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr 0.9fr 0.7fr 0.9fr 32px;
+    gap: var(--space-sm);
+    align-items: center;
+}
+
+.variantTableHeader {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding-top: var(--space-sm);
+}
+
+@media (max-width: 768px) {
+    .variantTableHeader {
+        display: none;
+    }
+
+    .variantTableRow {
+        grid-template-columns: 1fr 1fr;
+        padding: var(--space-sm);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+    }
+}
+
 @media (max-width: 480px) {
     .specRow {
         grid-template-columns: 1fr 32px;

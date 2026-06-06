@@ -122,6 +122,76 @@
     font-weight: 500;
 }
 
+.selectOptions {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.variantSection {
+    margin-bottom: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.variantGroup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.variantLabel {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+.variantOptions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+.variantChip {
+    padding: 0.5rem 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-full);
+    background: var(--background);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.variantChip:hover:not(:disabled) {
+    border-color: var(--primary);
+}
+
+.variantChipActive {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.variantChipDisabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
+.sizeChip {
+    min-width: 2.75rem;
+    text-align: center;
+}
+
+.selectedVariant {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
 .description {
     color: var(--text-muted);
     line-height: 1.8;

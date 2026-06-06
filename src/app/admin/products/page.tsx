@@ -7,7 +7,18 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
 import { uploadImage, validateImageFile, deleteImage } from '@/lib/upload';
+import { BANGLE_SIZES, JEWELRY_COLORS, RING_SIZES } from '@/lib/variants';
 import styles from './page.module.css';
+
+interface VariantFormRow {
+    _id?: string;
+    size: string;
+    color: string;
+    price: number | '';
+    stock: number;
+    sku: string;
+    image: string;
+}
 
 interface Category {
     name: string;
@@ -39,17 +50,30 @@ export default function AdminProductsPage() {
         lowStockThreshold: 5,
         isFeatured: false,
         specifications: [] as { key: string; value: string }[],
+        hasVariants: false,
+        variants: [] as VariantFormRow[],
+        colorImages: {} as Record<string, string[]>,
     });
     const [error, setError] = useState('');
 
     // Upload states
     const [uploadingImage, setUploadingImage] = useState(false);
     const [uploadingVideo, setUploadingVideo] = useState(false);
+    const [uploadingColorImage, setUploadingColorImage] = useState<string | null>(null);
     const productImageInputRef = useRef<HTMLInputElement>(null);
     const productVideoInputRef = useRef<HTMLInputElement>(null);
 
     // Get categories from store config ONLY (no fallbacks)
     const categories: Category[] = (config?.categories || []).sort((a: Category, b: Category) => a.order - b.order);
+
+    const getVariantColors = (variants: VariantFormRow[]): string[] => {
+        const colors = new Set<string>();
+        variants.forEach((v) => {
+            const c = (v.color || '').trim();
+            if (c) colors.add(c);
+        });
+        return Array.from(colors);
+    };
 
     useEffect(() => {
         if (!authLoading && !isAdmin) {
@@ -97,6 +121,17 @@ export default function AdminProductsPage() {
                     lowStockThreshold: productWithInventory.inventory?.lowStockThreshold || 5,
                     isFeatured: productWithInventory.isFeatured || false,
                     specifications: Object.entries(productWithInventory.specifications || {}).map(([key, value]) => ({ key, value: value as string })),
+                    hasVariants: productWithInventory.hasVariants || (productWithInventory.variants?.length > 0),
+                    variants: (productWithInventory.variants || []).map((v: any) => ({
+                        _id: v._id,
+                        size: v.size || '',
+                        color: v.color || '',
+                        price: v.price ?? '',
+                        stock: v.stock ?? 0,
+                        sku: v.sku || '',
+                        image: v.image || '',
+                    })),
+                    colorImages: productWithInventory.colorImages || {},
                 });
             } catch (err) {
                 console.error('Failed to fetch inventory:', err);
@@ -114,6 +149,9 @@ export default function AdminProductsPage() {
                     lowStockThreshold: 5,
                     isFeatured: product.isFeatured || false,
                     specifications: Object.entries(product.specifications || {}).map(([key, value]) => ({ key, value: value as string })),
+                    hasVariants: product.hasVariants || false,
+                    variants: [],
+                    colorImages: product.colorImages || {},
                 });
             } finally {
                 setLoadingInventory(false);
@@ -133,9 +171,76 @@ export default function AdminProductsPage() {
                 lowStockThreshold: 5,
                 isFeatured: false,
                 specifications: [],
+                hasVariants: false,
+                variants: [],
+                colorImages: {},
             });
         }
         setShowModal(true);
+    };
+
+    const handleColorImageUpload = async (color: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const validation = validateImageFile(file);
+        if (!validation.valid) {
+            setError(validation.error || 'Invalid file');
+            return;
+        }
+
+        setUploadingColorImage(color);
+        setError('');
+        try {
+            const url = await uploadImage(file, { folder: 'products' });
+            setFormData((prev) => ({
+                ...prev,
+                colorImages: {
+                    ...prev.colorImages,
+                    [color]: [...(prev.colorImages[color] || []), url],
+                },
+            }));
+        } catch (err: any) {
+            setError(err.message || 'Failed to upload image');
+        } finally {
+            setUploadingColorImage(null);
+            e.target.value = '';
+        }
+    };
+
+    const removeColorImage = (color: string, index: number) => {
+        const imageUrl = formData.colorImages[color]?.[index];
+        if (imageUrl?.includes('digitaloceanspaces.com')) {
+            deleteImage(imageUrl).catch(console.error);
+        }
+        setFormData((prev) => ({
+            ...prev,
+            colorImages: {
+                ...prev.colorImages,
+                [color]: (prev.colorImages[color] || []).filter((_, i) => i !== index),
+            },
+        }));
+    };
+
+    const addVariantRows = (sizes: string[], colors: string[] = JEWELRY_COLORS.slice(0, 3)) => {
+        const newRows: VariantFormRow[] = [];
+        for (const size of sizes) {
+            for (const color of colors) {
+                newRows.push({
+                    size,
+                    color,
+                    price: formData.price || '',
+                    stock: 5,
+                    sku: '',
+                    image: '',
+                });
+            }
+        }
+        setFormData(prev => ({
+            ...prev,
+            hasVariants: true,
+            variants: [...prev.variants, ...newRows],
+        }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -174,6 +279,33 @@ export default function AdminProductsPage() {
                 productData.hoverImageIndex = formData.hoverImageIndex;
             }
 
+            if (formData.hasVariants && formData.variants.length > 0) {
+                productData.variants = formData.variants
+                    .filter(v => v.size.trim() || v.color.trim())
+                    .map(v => ({
+                        ...(v._id ? { _id: v._id } : {}),
+                        size: v.size.trim() || undefined,
+                        color: v.color.trim() || undefined,
+                        price: v.price === '' ? formData.price : Number(v.price),
+                        stock: v.stock,
+                        sku: v.sku.trim() || undefined,
+                        image: v.image.trim() || undefined,
+                        isActive: true,
+                    }));
+            } else if (editProduct) {
+                productData.variants = [];
+            }
+
+            if (formData.hasVariants) {
+                const colors = getVariantColors(formData.variants);
+                const cleanedColorImages: Record<string, string[]> = {};
+                colors.forEach((color) => {
+                    const imgs = (formData.colorImages[color] || []).filter(Boolean);
+                    if (imgs.length) cleanedColorImages[color] = imgs;
+                });
+                productData.colorImages = cleanedColorImages;
+            }
+
             if (editProduct) {
                 // Update product
                 await api.updateProduct(editProduct._id, productData);
@@ -186,9 +318,12 @@ export default function AdminProductsPage() {
                 });
             } else {
                 // Create new product with initial inventory
+                const variantStock = formData.hasVariants
+                    ? formData.variants.reduce((sum, v) => sum + (v.stock || 0), 0)
+                    : formData.stock;
                 await api.createProduct({
                     ...productData,
-                    stock: formData.stock,
+                    stock: variantStock,
                     sku: formData.sku,
                     lowStockThreshold: formData.lowStockThreshold,
                 });
@@ -686,12 +821,188 @@ export default function AdminProductsPage() {
                                 </div>
                             </div>
 
+                            {/* Size & Color Variants */}
+                            <div className={styles.formGroup}>
+                                <label className={styles.checkboxLabel}>
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.hasVariants}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            hasVariants: e.target.checked,
+                                            variants: e.target.checked && formData.variants.length === 0
+                                                ? [{ size: '', color: '', price: formData.price || '', stock: 5, sku: '', image: '' }]
+                                                : formData.variants,
+                                        })}
+                                    />
+                                    <span>This product has size &amp; color options (rings, bangles, etc.)</span>
+                                </label>
+                                <span className={styles.hint}>
+                                    Like Instagram shopping — customers pick size and color before adding to cart
+                                </span>
+
+                                {formData.hasVariants && (
+                                    <div className={styles.variantEditor}>
+                                        <div className={styles.variantQuickAdd}>
+                                            <span className={styles.hint}>Quick add:</span>
+                                            <button type="button" className={styles.addSpecBtn} onClick={() => addVariantRows(RING_SIZES.slice(0, 5))}>
+                                                Ring sizes (6–10)
+                                            </button>
+                                            <button type="button" className={styles.addSpecBtn} onClick={() => addVariantRows(BANGLE_SIZES)}>
+                                                All bangle sizes
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={styles.addSpecBtn}
+                                                onClick={() => setFormData(prev => ({
+                                                    ...prev,
+                                                    variants: [...prev.variants, { size: '', color: '', price: prev.price || '', stock: 5, sku: '', image: '' }],
+                                                }))}
+                                            >
+                                                + One row
+                                            </button>
+                                        </div>
+                                        <div className={styles.variantTableHeader}>
+                                            <span>Size</span>
+                                            <span>Color</span>
+                                            <span>Price (₹)</span>
+                                            <span>Stock</span>
+                                            <span>SKU</span>
+                                            <span></span>
+                                        </div>
+                                        {formData.variants.map((variant, index) => (
+                                            <div key={index} className={styles.variantTableRow}>
+                                                <input
+                                                    type="text"
+                                                    className="input"
+                                                    placeholder="e.g. 12 or 2.6"
+                                                    value={variant.size}
+                                                    onChange={(e) => {
+                                                        const variants = [...formData.variants];
+                                                        variants[index] = { ...variants[index], size: e.target.value };
+                                                        setFormData({ ...formData, variants });
+                                                    }}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    className="input"
+                                                    placeholder="Gold"
+                                                    list="jewelry-colors"
+                                                    value={variant.color}
+                                                    onChange={(e) => {
+                                                        const variants = [...formData.variants];
+                                                        variants[index] = { ...variants[index], color: e.target.value };
+                                                        setFormData({ ...formData, variants });
+                                                    }}
+                                                />
+                                                <input
+                                                    type="number"
+                                                    className="input"
+                                                    min={0}
+                                                    placeholder={String(formData.price)}
+                                                    value={variant.price}
+                                                    onChange={(e) => {
+                                                        const variants = [...formData.variants];
+                                                        variants[index] = {
+                                                            ...variants[index],
+                                                            price: e.target.value === '' ? '' : parseFloat(e.target.value) || 0,
+                                                        };
+                                                        setFormData({ ...formData, variants });
+                                                    }}
+                                                />
+                                                <input
+                                                    type="number"
+                                                    className="input"
+                                                    min={0}
+                                                    value={variant.stock}
+                                                    onChange={(e) => {
+                                                        const variants = [...formData.variants];
+                                                        variants[index] = { ...variants[index], stock: parseInt(e.target.value) || 0 };
+                                                        setFormData({ ...formData, variants });
+                                                    }}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    className="input"
+                                                    placeholder="Auto"
+                                                    value={variant.sku}
+                                                    onChange={(e) => {
+                                                        const variants = [...formData.variants];
+                                                        variants[index] = { ...variants[index], sku: e.target.value };
+                                                        setFormData({ ...formData, variants });
+                                                    }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className={styles.removeSpecBtn}
+                                                    onClick={() => {
+                                                        setFormData({
+                                                            ...formData,
+                                                            variants: formData.variants.filter((_, i) => i !== index),
+                                                        });
+                                                    }}
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <datalist id="jewelry-colors">
+                                            {JEWELRY_COLORS.map(c => <option key={c} value={c} />)}
+                                        </datalist>
+
+                                        {getVariantColors(formData.variants).length > 0 && (
+                                            <div className={styles.colorImagesSection}>
+                                                <label className="label">Images by color</label>
+                                                <span className={styles.hint}>
+                                                    Customers see these photos when they select a color (like Instagram shopping)
+                                                </span>
+                                                {getVariantColors(formData.variants).map((color) => (
+                                                    <div key={color} className={styles.colorImageGroup}>
+                                                        <span className={styles.colorImageLabel}>{color}</span>
+                                                        <div className={styles.imageGallery}>
+                                                            {(formData.colorImages[color] || []).map((url, imgIdx) => (
+                                                                <div key={imgIdx} className={styles.imageThumb}>
+                                                                    <img src={url} alt={`${color} ${imgIdx + 1}`} />
+                                                                    <div className={styles.imageActions}>
+                                                                        <button
+                                                                            type="button"
+                                                                            className={styles.removeImageBtn}
+                                                                            onClick={() => removeColorImage(color, imgIdx)}
+                                                                        >
+                                                                            ×
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <label
+                                                                className={`${styles.uploadPlaceholder} ${uploadingColorImage === color ? styles.disabled : ''}`}
+                                                            >
+                                                                <input
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    style={{ display: 'none' }}
+                                                                    disabled={uploadingColorImage === color}
+                                                                    onChange={(e) => handleColorImageUpload(color, e)}
+                                                                />
+                                                                <span>
+                                                                    {uploadingColorImage === color ? 'Uploading...' : '+ Add'}
+                                                                </span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Inventory Section */}
                             {loadingInventory ? (
                                 <div className={styles.loadingInventory}>
                                     Loading inventory data...
                                 </div>
-                            ) : (
+                            ) : !formData.hasVariants ? (
                                 <>
                                     <div className={styles.formRow}>
                                         <div className={styles.formGroup}>
@@ -727,6 +1038,10 @@ export default function AdminProductsPage() {
                                         <span className={styles.hint}>Get notified when stock falls below this number</span>
                                     </div>
                                 </>
+                            ) : (
+                                <p className={styles.hint}>
+                                    Stock is managed per variant above. Total: {formData.variants.reduce((s, v) => s + (v.stock || 0), 0)} units
+                                </p>
                             )}
                             <div className={styles.modalActions}>
                                 <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}>

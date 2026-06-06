@@ -7,6 +7,16 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import { getCdnOptimizedUrl, isVideoUrl } from '@/lib/upload';
+import {
+    buildProductMedia,
+    findVariant,
+    formatVariantLabel,
+    getColors,
+    getSizes,
+    getVariantPrice,
+    isVariantInStock,
+    ProductVariant,
+} from '@/lib/variants';
 import styles from './page.module.css';
 
 export default function ProductDetailPage() {
@@ -20,6 +30,8 @@ export default function ProductDetailPage() {
     const [loading, setLoading] = useState(true);
     const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
     const [quantity, setQuantity] = useState(1);
+    const [selectedSize, setSelectedSize] = useState<string>('');
+    const [selectedColor, setSelectedColor] = useState<string>('');
     const [showLeadModal, setShowLeadModal] = useState(false);
     const [leadForm, setLeadForm] = useState({ name: '', phone: '' });
     const [leadSubmitted, setLeadSubmitted] = useState(false);
@@ -27,6 +39,10 @@ export default function ProductDetailPage() {
     useEffect(() => {
         fetchProduct();
     }, [slug]);
+
+    useEffect(() => {
+        setSelectedMediaIndex(0);
+    }, [selectedColor, selectedSize]);
 
     const fetchProduct = async () => {
         try {
@@ -44,7 +60,12 @@ export default function ProductDetailPage() {
             window.location.href = '/login';
             return;
         }
-        await addToCart(product._id, quantity);
+        if (!product) return;
+        const variant = product.hasVariants
+            ? findVariant(product, selectedSize || undefined, selectedColor || undefined)
+            : null;
+        if (product.hasVariants && !variant) return;
+        await addToCart(product._id, quantity, variant?._id);
     };
 
     const handleLeadSubmit = async (e: React.FormEvent) => {
@@ -78,18 +99,38 @@ export default function ProductDetailPage() {
         );
     }
 
-    const inStock = product.inventory?.inStock ?? true;
+    const hasVariants = product.hasVariants && (product.variants?.length ?? 0) > 0;
+    const sizes = hasVariants ? getSizes(product) : [];
+    const colors = hasVariants ? getColors(product) : [];
+    const selectedVariant: ProductVariant | null = hasVariants
+        ? findVariant(product, selectedSize || undefined, selectedColor || undefined)
+        : null;
 
-    // Combine images and videos into a single media array
-    const media = [
-        ...(product.images || []),
-        ...(product.videos || [])
-    ];
+    const displayPrice = hasVariants
+        ? (selectedVariant
+            ? getVariantPrice(product, selectedVariant)
+            : (product.inventory?.priceFrom ?? product.price))
+        : product.price;
 
-    // If no media, use placeholder
-    if (media.length === 0) {
-        media.push('/placeholder-jewelry.svg');
-    }
+    const showPriceRange = hasVariants && !selectedVariant && product.inventory?.priceFrom != null
+        && product.inventory?.priceTo != null
+        && product.inventory.priceFrom !== product.inventory.priceTo;
+
+    const variantInStock = hasVariants
+        ? (selectedVariant ? isVariantInStock(selectedVariant) : (product.inventory?.inStock ?? false))
+        : (product.inventory?.inStock ?? true);
+
+    const maxQuantity = hasVariants && selectedVariant
+        ? (selectedVariant.stock ?? 0)
+        : (product.inventory?.stock ?? 99);
+
+    const inStock = variantInStock;
+
+    const media = buildProductMedia(product, {
+        selectedColor: selectedColor || undefined,
+        selectedSize: selectedSize || undefined,
+        selectedVariant,
+    });
 
     const currentMedia = media[selectedMediaIndex] || media[0];
     const isVideo = isVideoUrl(currentMedia);
@@ -160,8 +201,14 @@ export default function ProductDetailPage() {
                         <h1 className={styles.title}>{product.title}</h1>
 
                         <div className={styles.pricing}>
-                            <span className={styles.price}>{formatPrice(product.price)}</span>
-                            {product.compareAtPrice && (
+                            {showPriceRange ? (
+                                <span className={styles.price}>
+                                    {formatPrice(product.inventory.priceFrom)} – {formatPrice(product.inventory.priceTo)}
+                                </span>
+                            ) : (
+                                <span className={styles.price}>{formatPrice(displayPrice)}</span>
+                            )}
+                            {product.compareAtPrice && !showPriceRange && (
                                 <span className={styles.comparePrice}>
                                     {formatPrice(product.compareAtPrice)}
                                 </span>
@@ -169,7 +216,9 @@ export default function ProductDetailPage() {
                         </div>
 
                         <div className={styles.stock}>
-                            {inStock ? (
+                            {hasVariants && !selectedVariant ? (
+                                <span className={styles.selectOptions}>Select size and color</span>
+                            ) : inStock ? (
                                 <span className={styles.inStock}>✓ In Stock</span>
                             ) : (
                                 <span className={styles.outOfStock}>✗ Out of Stock</span>
@@ -177,6 +226,68 @@ export default function ProductDetailPage() {
                         </div>
 
                         <p className={styles.description}>{product.description}</p>
+
+                        {hasVariants && (
+                            <div className={styles.variantSection}>
+                                {colors.length > 0 && (
+                                    <div className={styles.variantGroup}>
+                                        <span className={styles.variantLabel}>Color</span>
+                                        <div className={styles.variantOptions}>
+                                            {colors.map((color) => (
+                                                <button
+                                                    key={color}
+                                                    type="button"
+                                                    className={`${styles.variantChip} ${selectedColor === color ? styles.variantChipActive : ''}`}
+                                                    onClick={() => {
+                                                        setSelectedColor(color);
+                                                        setSelectedMediaIndex(0);
+                                                        setQuantity(1);
+                                                    }}
+                                                >
+                                                    {color}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {sizes.length > 0 && (
+                                    <div className={styles.variantGroup}>
+                                        <span className={styles.variantLabel}>Size</span>
+                                        <div className={styles.variantOptions}>
+                                            {sizes.map((size) => {
+                                                const variantForSize = findVariant(
+                                                    product,
+                                                    size,
+                                                    selectedColor || undefined,
+                                                );
+                                                const sizeAvailable = !selectedColor || (variantForSize && isVariantInStock(variantForSize));
+                                                return (
+                                                    <button
+                                                        key={size}
+                                                        type="button"
+                                                        disabled={!sizeAvailable}
+                                                        className={`${styles.variantChip} ${styles.sizeChip} ${selectedSize === size ? styles.variantChipActive : ''} ${!sizeAvailable ? styles.variantChipDisabled : ''}`}
+                                                        onClick={() => {
+                                                            setSelectedSize(size);
+                                                            setSelectedMediaIndex(0);
+                                                            setQuantity(1);
+                                                        }}
+                                                    >
+                                                        {size}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                                {selectedVariant && (
+                                    <p className={styles.selectedVariant}>
+                                        Selected: {formatVariantLabel(selectedVariant)}
+                                        {selectedVariant.sku && ` · SKU ${selectedVariant.sku}`}
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
                         {/* Quantity & Add to Cart */}
                         <div className={styles.actions}>
@@ -190,7 +301,7 @@ export default function ProductDetailPage() {
                                 <span>{quantity}</span>
                                 <button
                                     onClick={() => setQuantity((q) => q + 1)}
-                                    disabled={product.inventory && quantity >= product.inventory.stock}
+                                    disabled={quantity >= maxQuantity}
                                 >
                                     +
                                 </button>
@@ -198,9 +309,15 @@ export default function ProductDetailPage() {
                             <button
                                 className="btn btn-primary"
                                 onClick={handleAddToCart}
-                                disabled={!inStock || cartLoading}
+                                disabled={!inStock || cartLoading || (hasVariants && !selectedVariant)}
                             >
-                                {!inStock ? 'Out of Stock' : cartLoading ? 'Adding...' : 'Add to Cart'}
+                                {hasVariants && !selectedVariant
+                                    ? 'Select Options'
+                                    : !inStock
+                                        ? 'Out of Stock'
+                                        : cartLoading
+                                            ? 'Adding...'
+                                            : 'Add to Cart'}
                             </button>
                         </div>
 
@@ -320,8 +437,10 @@ export default function ProductDetailPage() {
                         )}
 
                         {/* SKU */}
-                        {product.inventory?.sku && (
-                            <p className={styles.sku}>SKU: {product.inventory.sku}</p>
+                        {(selectedVariant?.sku || product.inventory?.sku) && (
+                            <p className={styles.sku}>
+                                SKU: {selectedVariant?.sku || product.inventory?.sku}
+                            </p>
                         )}
                     </div>
                 </div>

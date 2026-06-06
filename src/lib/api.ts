@@ -115,25 +115,28 @@ class ApiClient {
 
     // Cart
     async getCart() {
-        return this.request<{ items: any[]; total: number; itemCount: number }>('/cart');
+        return this.request<import('@/types/commerce').CartResponse>('/cart');
     }
 
-    async addToCart(productId: string, quantity: number) {
-        return this.request<any>('/cart/items', {
+    async addToCart(productId: string, quantity: number, variantId?: string) {
+        return this.request<import('@/types/commerce').CartResponse>('/cart/items', {
             method: 'POST',
-            body: { productId, quantity },
+            body: { productId, quantity, ...(variantId ? { variantId } : {}) },
         });
     }
 
-    async updateCartItem(productId: string, quantity: number) {
-        return this.request<any>(`/cart/items/${productId}`, {
+    async updateCartItem(lineId: string, quantity: number) {
+        return this.request<import('@/types/commerce').CartResponse>(`/cart/items/line/${lineId}`, {
             method: 'PATCH',
             body: { quantity },
         });
     }
 
-    async removeFromCart(productId: string) {
-        return this.request<any>(`/cart/items/${productId}`, { method: 'DELETE' });
+    async removeFromCart(lineId: string) {
+        return this.request<import('@/types/commerce').CartResponse>(
+            `/cart/items/line/${lineId}`,
+            { method: 'DELETE' },
+        );
     }
 
     // Orders

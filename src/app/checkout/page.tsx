@@ -309,7 +309,7 @@ export default function CheckoutPage() {
                         <h2>Order Summary</h2>
                         <div className={styles.items}>
                             {items.map((item) => (
-                                <div key={item.productId} className={styles.summaryItem}>
+                                <div key={item.lineId} className={styles.summaryItem}>
                                     <img src={item.image || '/placeholder-jewelry.svg'} alt={item.title} />
                                     <div className={styles.itemInfo}>
                                         <span className={styles.itemName}>{item.title}</span>

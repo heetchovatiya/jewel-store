@@ -17,9 +17,11 @@ interface ProductCardProps {
         hoverImageIndex?: number | null;
         slug: string;
         category: string;
+        hasVariants?: boolean;
         inventory?: {
             stock: number;
             inStock: boolean;
+            priceFrom?: number;
         };
     };
 }
@@ -44,8 +46,16 @@ export default function ProductCard({ product }: ProductCardProps) {
         }
 
         if (!inStock) return;
+        if (product.hasVariants) {
+            window.location.href = `/products/${product.slug}`;
+            return;
+        }
         await addToCart(product._id, 1);
     };
+
+    const displayPrice = product.hasVariants && product.inventory?.priceFrom != null
+        ? product.inventory.priceFrom
+        : product.price;
 
     return (
         <Link href={`/products/${product.slug}`} className={styles.card}>
@@ -76,7 +86,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                         onClick={handleAddToCart}
                         disabled={loading || !inStock}
                     >
-                        {!inStock ? 'Out of Stock' : loading ? 'Adding...' : 'Add to Cart'}
+                        {!inStock ? 'Out of Stock' : product.hasVariants ? 'Choose Options' : loading ? 'Adding...' : 'Add to Cart'}
                     </button>
                 </div>
             </div>
@@ -84,7 +94,9 @@ export default function ProductCard({ product }: ProductCardProps) {
                 <span className={styles.category}>{product.category}</span>
                 <h3 className={styles.title}>{product.title}</h3>
                 <div className={styles.pricing}>
-                    <span className={styles.price}>{formatPrice(product.price)}</span>
+                    <span className={styles.price}>
+                        {product.hasVariants && product.inventory?.priceFrom != null ? `From ${formatPrice(displayPrice)}` : formatPrice(displayPrice)}
+                    </span>
                     {product.compareAtPrice && (
                         <span className={styles.comparePrice}>
                             {formatPrice(product.compareAtPrice)}
