@@ -85,7 +85,7 @@ export default function HomePage() {
                 </svg>
               </div>
               <h3>Easy Returns</h3>
-              <p>30-day return policy</p>
+              <p>7-day return policy</p>
             </div>
           </div>
         </div>
