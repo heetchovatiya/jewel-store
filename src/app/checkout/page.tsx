@@ -27,6 +27,8 @@ export default function CheckoutPage() {
     const [pincodeError, setPincodeError] = useState('');
     const lastPincodeLookupRef = useRef('');
 
+    const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod'>('online');
+
     const [address, setAddress] = useState({
         fullName: '',
         phone: '',
@@ -133,56 +135,70 @@ export default function CheckoutPage() {
         }
     };
 
+    const handleCodOrder = async () => {
+        const order = await api.placeCodOrder(address);
+        await clearCart();
+        router.push('/account/orders');
+    };
+
+    const handleOnlinePayment = async () => {
+        const sdkLoaded = await loadRazorpayScript();
+        if (!sdkLoaded) {
+            throw new Error('Unable to load Razorpay. Please check your internet and try again.');
+        }
+
+        const payment = await api.initiatePayment(address);
+        const options = {
+            key: payment.keyId,
+            amount: payment.amount,
+            currency: 'INR',
+            description: `Order ${payment.orderNumber}`,
+            order_id: payment.razorpayOrderId,
+            handler: async (response: any) => {
+                try {
+                    await api.verifyPayment({
+                        razorpayOrderId: response.razorpay_order_id,
+                        razorpayPaymentId: response.razorpay_payment_id,
+                        razorpaySignature: response.razorpay_signature,
+                    });
+
+                    await clearCart();
+                    router.push('/account/orders');
+                } catch (verifyError: any) {
+                    setError(verifyError.message || 'Payment verification failed. Please contact support.');
+                    setLoading(false);
+                }
+            },
+            prefill: {
+                name: user?.name || address.fullName,
+                contact: address.phone,
+                email: user?.email || '',
+            },
+            theme: { color: '#d4af37' },
+            modal: {
+                ondismiss: () => {
+                    setLoading(false);
+                },
+            },
+        };
+
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
         try {
-            const sdkLoaded = await loadRazorpayScript();
-            if (!sdkLoaded) {
-                throw new Error('Unable to load Razorpay. Please check your internet and try again.');
+            if (paymentMethod === 'cod') {
+                await handleCodOrder();
+            } else {
+                await handleOnlinePayment();
             }
-
-            const payment = await api.initiatePayment(address);
-            const options = {
-                key: payment.keyId,
-                amount: payment.amount,
-                currency: 'INR',
-                description: `Order ${payment.orderNumber}`,
-                order_id: payment.razorpayOrderId,
-                handler: async (response: any) => {
-                    try {
-                        const verified = await api.verifyPayment({
-                            razorpayOrderId: response.razorpay_order_id,
-                            razorpayPaymentId: response.razorpay_payment_id,
-                            razorpaySignature: response.razorpay_signature,
-                        });
-
-                        await clearCart();
-                        router.push('/account/orders');
-                    } catch (verifyError: any) {
-                        setError(verifyError.message || 'Payment verification failed. Please contact support.');
-                    }
-                },
-                prefill: {
-                    name: user?.name || address.fullName,
-                    contact: address.phone,
-                    email: user?.email || '',
-                },
-                theme: { color: '#d4af37' },
-                modal: {
-                    ondismiss: () => {
-                        setLoading(false);
-                    },
-                },
-            };
-
-            const razorpay = new window.Razorpay(options);
-            razorpay.open();
         } catch (err: any) {
-            setError(err.message || 'Failed to initiate payment');
-        } finally {
+            setError(err.message || 'Failed to place order');
             setLoading(false);
         }
     };
@@ -300,8 +316,42 @@ export default function CheckoutPage() {
                             </div>
                         </div>
 
+                        <div className={styles.paymentSection}>
+                            <h2>Payment Method</h2>
+                            <div className={styles.paymentOptions}>
+                                <label className={`${styles.paymentOption} ${paymentMethod === 'online' ? styles.paymentOptionActive : ''}`}>
+                                    <input
+                                        type="radio"
+                                        name="paymentMethod"
+                                        value="online"
+                                        checked={paymentMethod === 'online'}
+                                        onChange={() => setPaymentMethod('online')}
+                                    />
+                                    <div>
+                                        <span className={styles.paymentLabel}>Pay Online</span>
+                                        <span className={styles.paymentHint}>UPI, cards, net banking via Razorpay</span>
+                                    </div>
+                                </label>
+                                <label className={`${styles.paymentOption} ${paymentMethod === 'cod' ? styles.paymentOptionActive : ''}`}>
+                                    <input
+                                        type="radio"
+                                        name="paymentMethod"
+                                        value="cod"
+                                        checked={paymentMethod === 'cod'}
+                                        onChange={() => setPaymentMethod('cod')}
+                                    />
+                                    <div>
+                                        <span className={styles.paymentLabel}>Cash on Delivery</span>
+                                        <span className={styles.paymentHint}>Pay when your order arrives</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
                         <button type="submit" className="btn btn-primary" disabled={loading}>
-                            {loading ? 'Starting Payment...' : 'Pay Securely'}
+                            {loading
+                                ? paymentMethod === 'cod' ? 'Placing Order...' : 'Starting Payment...'
+                                : paymentMethod === 'cod' ? 'Place Order' : 'Pay Securely'}
                         </button>
                     </form>
 

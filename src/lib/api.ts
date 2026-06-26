@@ -171,6 +171,17 @@ class ApiClient {
         });
     }
 
+    async placeCodOrder(shippingAddress: any): Promise<{
+        orderId: string;
+        orderNumber: string;
+        status: string;
+    }> {
+        return this.request('/payments/cod', {
+            method: 'POST',
+            body: { shippingAddress },
+        });
+    }
+
     async pollOrderStatus(orderId: string): Promise<{ status: string }> {
         return this.request(`/orders/${orderId}`);
     }

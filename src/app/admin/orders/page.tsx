@@ -127,6 +127,15 @@ export default function AdminOrdersPage() {
 
                         <div className={styles.orderDetails}>
                             <div className={styles.detailSection}>
+                                <h3>Payment</h3>
+                                <p>
+                                    {selectedOrder.paymentMethod === 'cod'
+                                        ? 'Cash on Delivery'
+                                        : 'Online (Razorpay)'}
+                                </p>
+                            </div>
+
+                            <div className={styles.detailSection}>
                                 <h3>Shipping Address</h3>
                                 <p>{selectedOrder.shippingAddress?.fullName}</p>
                                 <p>{selectedOrder.shippingAddress?.phone}</p>
