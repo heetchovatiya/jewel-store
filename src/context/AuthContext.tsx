@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import api from '@/lib/api';
+import api, { ApiError } from '@/lib/api';
 
 interface User {
     _id: string;
@@ -61,7 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const userData = await api.getProfile();
             setUser(userData);
         } catch (err) {
-            console.error('Failed to fetch user:', err);
+            // Stale/expired JWT is expected after backend restart or logout elsewhere
+            if (!(err instanceof ApiError && err.status === 401)) {
+                console.error('Failed to fetch user:', err);
+            }
+            setUser(null);
             api.logout();
         } finally {
             setLoading(false);

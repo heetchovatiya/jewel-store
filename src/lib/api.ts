@@ -6,6 +6,16 @@ interface RequestOptions {
     headers?: Record<string, string>;
 }
 
+export class ApiError extends Error {
+    status: number;
+
+    constructor(message: string, status: number) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+    }
+}
+
 class ApiClient {
     private tenantId: string = 'default';
     private token: string | null = null;
@@ -53,7 +63,7 @@ class ApiClient {
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({ message: 'Request failed' }));
-            throw new Error(error.message || 'Request failed');
+            throw new ApiError(error.message || 'Request failed', response.status);
         }
 
         return response.json();
