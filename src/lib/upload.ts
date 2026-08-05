@@ -1,8 +1,24 @@
+/**
+ * Cloudflare R2 uploads — direct browser PUT via presigned URL (preferred).
+ *
+ * Flow (Class A / Class B friendly):
+ * 1) Backend issues presigned PUT (no ListObjects; metadata stays in MongoDB)
+ * 2) Browser uploads once to R2 with Cache-Control: immutable (1 year)
+ * 3) Store returned publicUrl (cdn.yourdomain.com/...) in MongoDB
+ * 4) Visitors read via CNAME CDN + browser cache → minimal Class B
+ */
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-interface UploadResponse {
+/** Hard cap — stay under R2 multipart thresholds (~200MB); app uses 20MB. */
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+
+interface PresignedUploadResponse {
+    uploadUrl: string;
     publicUrl: string;
     key: string;
+    cacheControl: string;
+    contentType: string;
 }
 
 interface UploadOptions {
@@ -10,70 +26,107 @@ interface UploadOptions {
     onProgress?: (percent: number) => void;
 }
 
+function authHeaders(): HeadersInit {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenantId') || 'default' : 'default';
+    if (!token) {
+        throw new Error('Authentication required');
+    }
+    return {
+        Authorization: `Bearer ${token}`,
+        'x-tenant-id': tenantId,
+        'Content-Type': 'application/json',
+    };
+}
+
 /**
- * Upload a file to Digital Ocean Spaces via backend proxy
- * This approach avoids CORS issues by having the backend handle the S3 upload
- * @param file - The file to upload
- * @param options - Upload options including folder and progress callback
- * @returns The public URL of the uploaded file
+ * Upload a file: compress (images) → get presigned URL → PUT directly to R2.
  */
 export async function uploadImage(
     file: File,
     options: UploadOptions
 ): Promise<string> {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenantId') || 'default' : 'default';
-
-    if (!token) {
-        throw new Error('Authentication required');
-    }
-
-    // Check if file is a video - skip compression for videos
     const isVideo = file.type.startsWith('video/');
     let fileToUpload = file;
 
     if (!isVideo) {
-        // Compress image before upload
-        console.log(`Original file: ${file.name}, size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
-        fileToUpload = await compressImage(file, 20); // 20MB limit
-        console.log(`Ready to upload: ${fileToUpload.name}, size: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
-    } else {
-        console.log(`Uploading video: ${file.name}, size: ${(file.size / 1024 / 1024).toFixed(2)}MB (no compression)`);
+        fileToUpload = await compressImage(file, 20);
     }
 
-    // Create FormData for multipart upload
-    const formData = new FormData();
-    formData.append('file', fileToUpload);
-    formData.append('folder', options.folder);
+    if (fileToUpload.size > MAX_UPLOAD_BYTES) {
+        throw new Error(`File must be under ${MAX_UPLOAD_BYTES / (1024 * 1024)}MB (avoids multipart Class A costs)`);
+    }
 
-    // Upload file to backend which proxies to DO Spaces
+    // (1) Ask backend for a signed PUT URL — Class A is the eventual PUT, not this call
+    const signRes = await fetch(`${API_BASE}/admin/upload/presigned-url`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+            folder: options.folder,
+            filename: fileToUpload.name,
+            contentType: fileToUpload.type || 'application/octet-stream',
+        }),
+    });
+
+    if (!signRes.ok) {
+        const error = await signRes.json().catch(() => ({ message: 'Failed to get upload URL' }));
+        throw new Error(error.message || 'Failed to get upload URL');
+    }
+
+    const signed: PresignedUploadResponse = await signRes.json();
+
+    // (2) Direct browser → R2 PUT (single Class A write; Cache-Control baked into object)
+    const putRes = await fetch(signed.uploadUrl, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': signed.contentType,
+            'Cache-Control': signed.cacheControl,
+        },
+        body: fileToUpload,
+    });
+
+    if (!putRes.ok) {
+        const text = await putRes.text().catch(() => '');
+        console.error('R2 direct upload failed:', putRes.status, text);
+        // Fallback: proxy through Droplet if R2 CORS is not configured yet
+        return uploadViaBackendProxy(fileToUpload, options.folder);
+    }
+
+    if (options.onProgress) {
+        options.onProgress(100);
+    }
+
+    return signed.publicUrl;
+}
+
+/** Fallback when R2 bucket CORS is missing — still sets Cache-Control server-side. */
+async function uploadViaBackendProxy(file: File, folder: string): Promise<string> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenantId') || 'default' : 'default';
+    if (!token) throw new Error('Authentication required');
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+
     const response = await fetch(`${API_BASE}/admin/upload/file`, {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             'x-tenant-id': tenantId,
-            // Note: Don't set Content-Type for FormData, browser will set it with boundary
         },
         body: formData,
     });
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ message: 'Failed to upload file' }));
-        console.error('Upload failed:', response.status, error);
         throw new Error(error.message || 'Failed to upload file');
     }
 
-    const { publicUrl }: UploadResponse = await response.json();
-    console.log('Upload successful, public URL:', publicUrl);
+    const { publicUrl } = await response.json();
     return publicUrl;
 }
 
-/**
- * Upload multiple files
- * @param files - Array of files to upload
- * @param options - Upload options
- * @returns Array of public URLs
- */
 export async function uploadImages(
     files: File[],
     options: UploadOptions
@@ -92,16 +145,9 @@ export async function uploadImages(
     return urls;
 }
 
-/**
- * Compress an image file to reduce size and optimize format
- * @param file - The image file to compress
- * @param maxSizeMB - Maximum size in MB (default 2)
- * @returns Compressed image as a File object
- */
 async function compressImage(file: File, maxSizeMB: number = 2): Promise<File> {
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
-    // If already small enough and is WebP, return as-is
     if (file.size <= maxSizeBytes && file.type === 'image/webp') {
         return file;
     }
@@ -118,7 +164,6 @@ async function compressImage(file: File, maxSizeMB: number = 2): Promise<File> {
 
         img.onload = async () => {
             try {
-                // Calculate new dimensions (max width 1920px)
                 const maxWidth = 1920;
                 let { width, height } = img;
 
@@ -127,7 +172,6 @@ async function compressImage(file: File, maxSizeMB: number = 2): Promise<File> {
                     width = maxWidth;
                 }
 
-                // Create canvas and draw resized image
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
@@ -140,7 +184,6 @@ async function compressImage(file: File, maxSizeMB: number = 2): Promise<File> {
 
                 ctx.drawImage(img, 0, 0, width, height);
 
-                // Try different quality levels to get under size limit
                 const qualities = [0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6];
 
                 for (const quality of qualities) {
@@ -151,36 +194,30 @@ async function compressImage(file: File, maxSizeMB: number = 2): Promise<File> {
                     if (!blob) continue;
 
                     if (blob.size <= maxSizeBytes) {
-                        // Success! Convert blob to file
-                        const compressedFile = new File(
-                            [blob],
-                            file.name.replace(/\.[^/.]+$/, '.webp'),
-                            { type: 'image/webp' }
+                        resolve(
+                            new File(
+                                [blob],
+                                file.name.replace(/\.[^/.]+$/, '.webp'),
+                                { type: 'image/webp' },
+                            ),
                         );
-                        console.log(`Compressed ${file.name} from ${(file.size / 1024 / 1024).toFixed(2)}MB to ${(blob.size / 1024 / 1024).toFixed(2)}MB (quality: ${quality})`);
-                        resolve(compressedFile);
                         return;
                     }
                 }
 
-                // If still too large, reject
-                reject(new Error(`Unable to compress image to under ${maxSizeMB}MB. Please use a smaller image or compress it manually.`));
+                reject(new Error(`Unable to compress image to under ${maxSizeMB}MB.`));
             } catch (err) {
                 reject(err);
             }
         };
 
         img.onerror = () => reject(new Error('Failed to load image'));
-
         reader.readAsDataURL(file);
     });
 }
 
-/**
- * Validate file before upload
- */
 export function validateImageFile(file: File): { valid: boolean; error?: string } {
-    const maxSize = 100 * 1024 * 1024; // 100MB before compression
+    const maxSize = 100 * 1024 * 1024;
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
     if (!allowedTypes.includes(file.type)) {
@@ -194,36 +231,15 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
     return { valid: true };
 }
 
-/**
- * Delete an image from Digital Ocean Spaces
- * @param url - The public URL of the image to delete
- * @returns Whether the deletion was successful
- */
 export async function deleteImage(url: string): Promise<boolean> {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenantId') || 'default' : 'default';
-
-    if (!token) {
-        console.warn('No token for image deletion');
-        return false;
-    }
-
     try {
         const response = await fetch(`${API_BASE}/admin/upload/file`, {
             method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'x-tenant-id': tenantId,
-                'Content-Type': 'application/json',
-            },
+            headers: authHeaders(),
             body: JSON.stringify({ url }),
         });
 
-        if (!response.ok) {
-            console.error('Failed to delete image:', response.status);
-            return false;
-        }
-
+        if (!response.ok) return false;
         const { success } = await response.json();
         return success;
     } catch (error) {
@@ -232,13 +248,10 @@ export async function deleteImage(url: string): Promise<boolean> {
     }
 }
 
-/**
- * Validate video file before upload
- */
 export function validateVideoFile(file: File): { valid: boolean; error?: string } {
-    const maxSize = 20 * 1024 * 1024; // 20MB
+    const maxSize = MAX_UPLOAD_BYTES;
     const allowedTypes = [
-        'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'
+        'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo',
     ];
 
     if (!allowedTypes.includes(file.type)) {
@@ -246,15 +259,12 @@ export function validateVideoFile(file: File): { valid: boolean; error?: string 
     }
 
     if (file.size > maxSize) {
-        return { valid: false, error: 'Video size must be less than 20MB. Please compress your video before uploading.' };
+        return { valid: false, error: 'Video size must be less than 20MB.' };
     }
 
     return { valid: true };
 }
 
-/**
- * Upload a video file
- */
 export async function uploadVideo(
     file: File,
     options: UploadOptions
@@ -263,39 +273,18 @@ export async function uploadVideo(
     if (!validation.valid) {
         throw new Error(validation.error);
     }
-    return uploadImage(file, options); // Reuse uploadImage as it handles the backend proxy
+    return uploadImage(file, options);
 }
 
-/**
- * Get optimized CDN URL for images
- * @param url - The original image URL
- * @param options - Optimization options (width, quality, format)
- * @returns - The optimized URL
- */
+/** Public CDN URLs are already edge-friendly; return as-is. */
 export function getCdnOptimizedUrl(
     url: string,
-    options: { width?: number; quality?: number; format?: 'webp' | 'auto' } = {}
+    _options: { width?: number; quality?: number; format?: 'webp' | 'auto' } = {}
 ): string {
     if (!url || typeof url !== 'string') return '';
-
-    // If not a DO Spaces CDN URL or is a video, return as-is
-    if (!url.includes('digitaloceanspaces.com') || isVideoUrl(url)) return url;
-
-    const { width, quality = 85, format = 'webp' } = options;
-    const params = new URLSearchParams();
-
-    if (width) params.set('width', width.toString());
-    params.set('quality', quality.toString());
-    if (format === 'webp') params.set('format', 'webp');
-
-    // Check if URL already has query params
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}${params.toString()}`;
+    return url;
 }
 
-/**
- * Check if a URL points to a video
- */
 export function isVideoUrl(url: string): boolean {
     if (!url) return false;
     const lowerUrl = url.toLowerCase();
@@ -303,4 +292,13 @@ export function isVideoUrl(url: string): boolean {
         lowerUrl.endsWith('.webm') ||
         lowerUrl.endsWith('.mov') ||
         lowerUrl.endsWith('.avi');
+}
+
+export function isManagedStorageUrl(url: string): boolean {
+    if (!url) return false;
+    return (
+        url.includes('digitaloceanspaces.com') ||
+        url.includes('r2.cloudflarestorage.com') ||
+        Boolean(process.env.NEXT_PUBLIC_CDN_URL && url.startsWith(process.env.NEXT_PUBLIC_CDN_URL))
+    );
 }

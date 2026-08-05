@@ -210,7 +210,7 @@ export default function AdminProductsPage() {
 
     const removeColorImage = (color: string, index: number) => {
         const imageUrl = formData.colorImages[color]?.[index];
-        if (imageUrl?.includes('digitaloceanspaces.com')) {
+        if (imageUrl) {
             deleteImage(imageUrl).catch(console.error);
         }
         setFormData((prev) => ({
@@ -421,7 +421,7 @@ export default function AdminProductsPage() {
         const imageUrl = formData.images[index];
 
         // Delete from DO Spaces (fire and forget - don't block UI)
-        if (imageUrl && imageUrl.includes('digitaloceanspaces.com')) {
+        if (imageUrl) {
             deleteImage(imageUrl).catch(err => console.error('Failed to delete image:', err));
         }
 
@@ -705,7 +705,7 @@ export default function AdminProductsPage() {
                                                         setFormData({ ...formData, videos: newVideos });
 
                                                         // Attempt to delete from storage
-                                                        if (videoUrl && videoUrl.includes('digitaloceanspaces.com')) {
+                                                        if (videoUrl) {
                                                             deleteImage(videoUrl).catch(console.error);
                                                         }
                                                     }}
