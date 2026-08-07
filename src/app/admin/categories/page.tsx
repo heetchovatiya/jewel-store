@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
-import { uploadImage, validateImageFile } from '@/lib/upload';
+import { uploadImage, validateImageFile, getPublicUrl } from '@/lib/upload';
 import styles from './page.module.css';
 
 interface Category {
@@ -266,7 +266,7 @@ export default function AdminCategoriesPage() {
                             <div className={styles.categoryThumbnail}>
                                 {category.image ? (
                                     <div className={styles.thumbnailWrapper}>
-                                        <img src={category.image} alt={category.name} />
+                                        <img src={getPublicUrl(category.image)} alt={category.name} />
                                         <button
                                             className={styles.removeThumbnailBtn}
                                             onClick={() => removeCategoryImage(category.slug)}
@@ -396,7 +396,7 @@ export default function AdminCategoriesPage() {
                             </div>
                             {newCategory.image && (
                                 <div className={styles.imagePreview}>
-                                    <img src={newCategory.image} alt="Preview" />
+                                    <img src={getPublicUrl(newCategory.image)} alt="Preview" />
                                     <button
                                         type="button"
                                         className={styles.removeImageBtn}

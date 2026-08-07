@@ -24,8 +24,9 @@ const nextConfig: NextConfig = {
         hostname: 'jewel-store.sgp1.digitaloceanspaces.com',
         pathname: '/**',
       },
-      // Cloudflare R2 custom CDN domain
-      ...(cdnHostname
+      // Cloudflare R2 custom CDN domain (fallback if NEXT_PUBLIC_CDN_URL unset at build)
+      { protocol: 'https', hostname: 'cdn.priyancigold.com', pathname: '/**' },
+      ...(cdnHostname && cdnHostname !== 'cdn.priyancigold.com'
         ? [{ protocol: 'https' as const, hostname: cdnHostname, pathname: '/**' }]
         : []),
     ],

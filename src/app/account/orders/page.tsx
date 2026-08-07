@@ -4,17 +4,17 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
+import { getPublicUrl } from '@/lib/upload';
 import styles from './orders.module.css';
 
 interface OrderItem {
-    product: {
-        _id: string;
-        name: string;
-        slug: string;
-        images: string[];
-    };
+    productId?: string;
+    title: string;
+    image?: string;
     quantity: number;
     price: number;
+    size?: string;
+    color?: string;
 }
 
 interface Order {
@@ -184,10 +184,10 @@ export default function OrdersPage() {
                                             {order.items.map((item, index) => (
                                                 <div key={index} className={styles.orderItem}>
                                                     <div className={styles.itemImage}>
-                                                        {item.product?.images?.[0] ? (
+                                                        {item.image ? (
                                                             <img
-                                                                src={item.product.images[0]}
-                                                                alt={item.product.name}
+                                                                src={getPublicUrl(item.image)}
+                                                                alt={item.title}
                                                             />
                                                         ) : (
                                                             <div className={styles.noImage}>
@@ -201,7 +201,7 @@ export default function OrdersPage() {
                                                     </div>
                                                     <div className={styles.itemInfo}>
                                                         <span className={styles.itemName}>
-                                                            {item.product?.name || 'Product unavailable'}
+                                                            {item.title || 'Product unavailable'}
                                                         </span>
                                                         <span className={styles.itemMeta}>
                                                             Qty: {item.quantity} × {formatCurrency(item.price)}

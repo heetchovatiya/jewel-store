@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
-import { uploadImage, validateImageFile, deleteImage } from '@/lib/upload';
+import { uploadImage, validateImageFile, deleteImage, getPublicUrl } from '@/lib/upload';
 import { BANGLE_SIZES, RING_SIZES } from '@/lib/variants';
 import styles from './page.module.css';
 
@@ -542,7 +542,7 @@ export default function AdminProductsPage() {
                                 <span className={styles.featuredBadge}>★ Featured</span>
                             )}
                             <div className={styles.productImage}>
-                                <img src={product.images?.[0] || '/placeholder-jewelry.svg'} alt={product.title} />
+                                <img src={getPublicUrl(product.images?.[0]) || '/placeholder-jewelry.svg'} alt={product.title} />
                             </div>
                             <div className={styles.productInfo}>
                                 <h3>{product.title}</h3>
@@ -640,7 +640,7 @@ export default function AdminProductsPage() {
                                 <div className={styles.imageGallery}>
                                     {formData.images.map((url, index) => (
                                         <div key={index} className={`${styles.imageThumb} ${formData.hoverImageIndex === index ? styles.hoverImageSelected : ''}`}>
-                                            <img src={url} alt={`Product ${index + 1}`} />
+                                            <img src={getPublicUrl(url)} alt={`Product ${index + 1}`} />
                                             <div className={styles.imageActions}>
                                                 <button
                                                     type="button"
@@ -693,7 +693,7 @@ export default function AdminProductsPage() {
                                 <div className={styles.imageGallery}>
                                     {(formData.videos || []).map((url, index) => (
                                         <div key={index} className={styles.imageThumb} style={{ width: 120 }}>
-                                            <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <video src={getPublicUrl(url)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                             <div className={styles.imageActions}>
                                                 <button
                                                     type="button"
@@ -952,7 +952,7 @@ export default function AdminProductsPage() {
                                                         <div className={styles.imageGallery}>
                                                             {(formData.colorImages[color] || []).map((url, imgIdx) => (
                                                                 <div key={imgIdx} className={styles.imageThumb}>
-                                                                    <img src={url} alt={`${color} ${imgIdx + 1}`} />
+                                                                    <img src={getPublicUrl(url)} alt={`${color} ${imgIdx + 1}`} />
                                                                     <div className={styles.imageActions}>
                                                                         <button
                                                                             type="button"

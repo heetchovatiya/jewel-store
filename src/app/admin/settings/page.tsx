@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
-import { uploadImage, validateImageFile } from '@/lib/upload';
+import { uploadImage, validateImageFile, getPublicUrl } from '@/lib/upload';
 import styles from './page.module.css';
 
 export default function AdminSettingsPage() {
@@ -269,7 +269,7 @@ export default function AdminSettingsPage() {
                             <div className={styles.fileUploadWrapper}>
                                 {config.logoUrl && (
                                     <div className={styles.logoPreview}>
-                                        <img src={config.logoUrl} alt="Logo" />
+                                        <img src={getPublicUrl(config.logoUrl)} alt="Logo" />
                                         <button
                                             type="button"
                                             className={styles.clearBtn}
@@ -371,7 +371,7 @@ export default function AdminSettingsPage() {
                                 <div className={styles.aboutImageList}>
                                     {config.aboutUs.images.map((img, index) => (
                                         <div key={index} className={styles.aboutImageItem}>
-                                            <img src={img} alt={`About ${index + 1}`} />
+                                            <img src={getPublicUrl(img)} alt={`About ${index + 1}`} />
                                             <button
                                                 type="button"
                                                 className={styles.removeBtn}
@@ -428,7 +428,7 @@ export default function AdminSettingsPage() {
                             config.heroBanners.map((banner, index) => (
                                 <div key={index} className={styles.bannerItem}>
                                     <div className={styles.bannerPreview}>
-                                        <img src={banner} alt={`Banner ${index + 1}`} />
+                                        <img src={getPublicUrl(banner)} alt={`Banner ${index + 1}`} />
                                     </div>
                                     <div className={styles.bannerUrl}>{banner}</div>
                                     <div className={styles.bannerActions}>

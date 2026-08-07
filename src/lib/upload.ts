@@ -1,14 +1,15 @@
 /**
  * Cloudflare R2 uploads — direct browser PUT via presigned URL (preferred).
  *
- * Flow (Class A / Class B friendly):
- * 1) Backend issues presigned PUT (no ListObjects; metadata stays in MongoDB)
- * 2) Browser uploads once to R2 with Cache-Control: immutable (1 year)
- * 3) Store returned publicUrl (cdn.yourdomain.com/...) in MongoDB
- * 4) Visitors read via CNAME CDN + browser cache → minimal Class B
+ * Flow:
+ * 1) Backend issues presigned PUT
+ * 2) Browser uploads once to R2 with Cache-Control: immutable
+ * 3) Store returned object **key** in MongoDB (API expands to CDN URL on read)
+ * 4) Visitors read via CDN_BASE_URL / NEXT_PUBLIC_CDN_URL
  */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const CDN_BASE = (process.env.NEXT_PUBLIC_CDN_URL || '').replace(/\/$/, '');
 
 /** Hard cap — stay under R2 multipart thresholds (~200MB); app uses 20MB. */
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
@@ -39,8 +40,19 @@ function authHeaders(): HeadersInit {
     };
 }
 
+/** Build a public CDN URL from a storage key (or pass through full URLs). */
+export function getPublicUrl(keyOrUrl: string | null | undefined): string {
+    if (!keyOrUrl) return '';
+    const trimmed = keyOrUrl.trim();
+    if (!trimmed) return '';
+    if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('/')) return trimmed;
+    if (!CDN_BASE) return trimmed;
+    return `${CDN_BASE}/${trimmed.replace(/^\//, '')}`;
+}
+
 /**
  * Upload a file: compress (images) → get presigned URL → PUT directly to R2.
+ * Returns the object **key** for MongoDB storage (not the full CDN URL).
  */
 export async function uploadImage(
     file: File,
@@ -96,7 +108,7 @@ export async function uploadImage(
         options.onProgress(100);
     }
 
-    return signed.publicUrl;
+    return signed.key;
 }
 
 /** Fallback when R2 bucket CORS is missing — still sets Cache-Control server-side. */
@@ -123,8 +135,8 @@ async function uploadViaBackendProxy(file: File, folder: string): Promise<string
         throw new Error(error.message || 'Failed to upload file');
     }
 
-    const { publicUrl } = await response.json();
-    return publicUrl;
+    const { key, publicUrl } = await response.json();
+    return key || publicUrl;
 }
 
 export async function uploadImages(
@@ -276,13 +288,12 @@ export async function uploadVideo(
     return uploadImage(file, options);
 }
 
-/** Public CDN URLs are already edge-friendly; return as-is. */
+/** Public CDN URLs / keys — resolve keys via NEXT_PUBLIC_CDN_URL. */
 export function getCdnOptimizedUrl(
     url: string,
     _options: { width?: number; quality?: number; format?: 'webp' | 'auto' } = {}
 ): string {
-    if (!url || typeof url !== 'string') return '';
-    return url;
+    return getPublicUrl(url);
 }
 
 export function isVideoUrl(url: string): boolean {
@@ -291,14 +302,20 @@ export function isVideoUrl(url: string): boolean {
     return lowerUrl.endsWith('.mp4') ||
         lowerUrl.endsWith('.webm') ||
         lowerUrl.endsWith('.mov') ||
-        lowerUrl.endsWith('.avi');
+        lowerUrl.endsWith('.avi') ||
+        lowerUrl.includes('.mp4') ||
+        lowerUrl.includes('.webm');
 }
 
 export function isManagedStorageUrl(url: string): boolean {
     if (!url) return false;
-    return (
+    if (
         url.includes('digitaloceanspaces.com') ||
         url.includes('r2.cloudflarestorage.com') ||
-        Boolean(process.env.NEXT_PUBLIC_CDN_URL && url.startsWith(process.env.NEXT_PUBLIC_CDN_URL))
-    );
+        Boolean(CDN_BASE && url.startsWith(CDN_BASE))
+    ) {
+        return true;
+    }
+    // Bare object keys we manage
+    return /^(products|banners|logos|about|categories)\//.test(url);
 }
