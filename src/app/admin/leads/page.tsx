@@ -64,7 +64,9 @@ export default function AdminLeadsPage() {
         <div className={styles.ordersPage}>
             <div className={styles.header}>
                 <h1>Leads</h1>
+                <label htmlFor="lead-status-filter" className="sr-only">Filter by status</label>
                 <select
+                    id="lead-status-filter"
                     className="input"
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}

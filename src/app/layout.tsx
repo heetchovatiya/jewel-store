@@ -1,55 +1,90 @@
-import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
-import "./globals.css";
-import { ThemeProvider } from "@/context/ThemeContext";
-import { AuthProvider } from "@/context/AuthContext";
-import { CartProvider } from "@/context/CartContext";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import DynamicFavicon from "@/components/DynamicFavicon";
+import type { Metadata } from 'next';
+import { JsonLd } from '@/components/JsonLd';
+import {
+  SITE_URL,
+  DEFAULT_DESCRIPTION,
+  BRAND_NAME,
+  buildOrganizationJsonLd,
+} from '@/lib/seo';
+import { ThemeProvider } from '@/context/ThemeContext';
+import { AuthProvider } from '@/context/AuthContext';
+import { CartProvider } from '@/context/CartContext';
+import Navbar from '@/components/Navbar';
+import DynamicFavicon from '@/components/DynamicFavicon';
+import { fetchPublicConfig } from '@/lib/server-api';
+import { Fraunces, Public_Sans, IBM_Plex_Mono } from 'next/font/google';
+import dynamic from 'next/dynamic';
+import './globals.css';
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
+const Footer = dynamic(() => import('@/components/Footer'));
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-voice',
+  display: 'swap',
+  weight: ['400', '500', '600'],
 });
 
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-display",
+const publicSans = Public_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+  weight: ['400', '500', '600'],
+});
+
+const plexMono = IBM_Plex_Mono({
+  weight: ['400', '500'],
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
+  preload: false, // not needed for first paint / LCP
 });
 
 export const metadata: Metadata = {
-  title: "Priyanci Gold | 916 Hallmarked Gold Jewellery | Premium Gold Ornaments",
-  description: "Shop exquisite 916 hallmarked gold jewellery at Priyanci Gold. Discover our premium collection of authentic gold rings, necklaces, bangles, earrings & more. BIS certified quality, handcrafted designs, free shipping across India.",
-  keywords: "916 gold jewellery, 22 karat gold, hallmarked gold, gold ornaments, gold rings, gold necklaces, gold bangles, gold earrings, pure gold jewelry, BIS hallmark gold, indian gold jewellery, priyanci gold, premium gold collection, handcrafted gold, authentic gold jewelry, 22k gold",
-  authors: [{ name: "Priyanci Gold" }],
-  creator: "Priyanci Gold",
-  publisher: "Priyanci Gold",
-  metadataBase: new URL("https://www.priyancigold.com"),
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${BRAND_NAME} — Certified Gold & Diamond Jewellery Online`,
+    template: `%s | ${BRAND_NAME}`,
+  },
+  description: DEFAULT_DESCRIPTION,
+  keywords: [
+    'gold jewellery online',
+    'hallmarked gold jewellery',
+    '916 gold jewellery',
+    '22 karat gold',
+    'BIS hallmark gold',
+    'Priyanci Gold',
+    'gold rings',
+    'gold necklaces',
+    'gold bangles',
+  ],
+  authors: [{ name: BRAND_NAME }],
+  creator: BRAND_NAME,
+  publisher: BRAND_NAME,
   alternates: {
-    canonical: "https://www.priyancigold.com",
+    canonical: SITE_URL,
   },
   openGraph: {
-    type: "website",
-    locale: "en_IN",
-    url: "https://www.priyancigold.com",
-    siteName: "Priyanci Gold",
-    title: "Priyanci Gold | 916 Hallmarked Gold Jewellery",
-    description: "Shop exquisite 916 hallmarked gold jewellery. Premium quality, handcrafted designs, BIS certified authentic gold ornaments.",
+    type: 'website',
+    locale: 'en_IN',
+    url: SITE_URL,
+    siteName: BRAND_NAME,
+    title: `${BRAND_NAME} — Certified Gold & Diamond Jewellery Online`,
+    description: DEFAULT_DESCRIPTION,
     images: [
       {
-        url: "/og-image.jpg",
+        url: '/placeholder-jewelry.jpg',
         width: 1200,
         height: 630,
-        alt: "Priyanci Gold - 916 Hallmarked Gold Jewellery Collection",
+        alt: `${BRAND_NAME} — 916 Hallmarked Gold Jewellery`,
       },
     ],
   },
   twitter: {
-    card: "summary_large_image",
-    title: "Priyanci Gold | 916 Hallmarked Gold Jewellery",
-    description: "Shop exquisite 916 hallmarked gold jewellery. Premium quality, handcrafted designs, BIS certified authentic gold ornaments.",
-    images: ["/og-image.jpg"],
+    card: 'summary_large_image',
+    title: `${BRAND_NAME} — Certified Gold & Diamond Jewellery Online`,
+    description: DEFAULT_DESCRIPTION,
+    images: ['/placeholder-jewelry.jpg'],
   },
   robots: {
     index: true,
@@ -57,33 +92,37 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
     },
   },
   verification: {
-    google: "your-google-verification-code",
+    google: process.env.NEXT_PUBLIC_GSC_VERIFICATION || undefined,
   },
-  category: "Jewellery",
+  category: 'Jewellery',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialConfig = await fetchPublicConfig();
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${playfair.variable}`} suppressHydrationWarning>
-        <ThemeProvider>
+      <body
+        className={`${fraunces.variable} ${publicSans.variable} ${plexMono.variable}`}
+        suppressHydrationWarning
+      >
+        <JsonLd data={buildOrganizationJsonLd()} />
+        <ThemeProvider initialConfig={initialConfig}>
           <DynamicFavicon />
           <AuthProvider>
             <CartProvider>
               <Navbar />
-              <main className="main-content">
-                {children}
-              </main>
+              <main className="main-content">{children}</main>
               <Footer />
             </CartProvider>
           </AuthProvider>
@@ -92,4 +131,3 @@ export default function RootLayout({
     </html>
   );
 }
-

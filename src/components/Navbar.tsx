@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
@@ -84,7 +85,15 @@ export default function Navbar() {
                 {/* Logo */}
                 <Link href="/" className={styles.logo} onClick={handleNavClick}>
                     {config?.logoUrl ? (
-                        <img src={config.logoUrl} alt={config.storeName} className={styles.logoImg} />
+                        <Image
+                            src={config.logoUrl}
+                            alt={config.storeName || 'Priyanci Gold'}
+                            width={140}
+                            height={40}
+                            priority
+                            className={styles.logoImg}
+                            style={{ width: 'auto', height: '40px' }}
+                        />
                     ) : (
                         <span className={styles.logoText}>{config?.storeName || 'Jewel Store'}</span>
                     )}
@@ -148,19 +157,21 @@ export default function Navbar() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className={styles.searchInput}
                             />
-                            <button type="submit" className={styles.searchSubmit}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="11" cy="11" r="8"></circle>
-                                    <path d="m21 21-4.35-4.35"></path>
-                                </svg>
-                            </button>
+                        <button type="submit" className={styles.searchSubmit} aria-label="Submit search">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                        </button>
                         </form>
                         <button
+                            type="button"
                             className={styles.iconBtn}
                             onClick={() => setSearchOpen(!searchOpen)}
+                            aria-label="Search products"
                             title="Search Products"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                 <circle cx="11" cy="11" r="8"></circle>
                                 <path d="m21 21-4.35-4.35"></path>
                             </svg>
@@ -168,23 +179,26 @@ export default function Navbar() {
                     </div>
 
                     {/* Cart */}
-                    <Link href="/cart" className={styles.cartBtn}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <Link href="/cart" className={styles.cartBtn} aria-label={`View cart${itemCount > 0 ? `, ${itemCount} items` : ''}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <circle cx="9" cy="21" r="1"></circle>
                             <circle cx="20" cy="21" r="1"></circle>
                             <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                         </svg>
-                        {itemCount > 0 && <span className={styles.cartBadge}>{itemCount}</span>}
+                        {itemCount > 0 && <span className={styles.cartBadge} aria-hidden="true">{itemCount}</span>}
                     </Link>
 
                     {/* User Menu with click outside detection */}
                     {isAuthenticated ? (
                         <div ref={userMenuRef} className={styles.userMenu}>
                             <button
+                                type="button"
                                 className={`${styles.userBtn} ${userMenuOpen ? styles.active : ''}`}
                                 onClick={() => setUserMenuOpen(!userMenuOpen)}
+                                aria-label="Account menu"
+                                aria-expanded={userMenuOpen}
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                     <circle cx="12" cy="7" r="4"></circle>
                                 </svg>

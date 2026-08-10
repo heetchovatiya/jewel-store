@@ -48,15 +48,24 @@ interface ThemeContextType {
     formatPrice: (price: number) => string;
 }
 
+const BRAND = {
+    primary: '#A67C3D',      // antique gold
+    secondary: '#EFE2D5',    // rose blush
+    background: '#F7F3EC',   // bone ivory
+    text: '#1F1B16',         // ink brown
+    oxblood: '#6B1E23',
+    emerald: '#2F4A3C',
+} as const;
+
 const defaultConfig: StoreConfig = {
-    storeName: 'Jewel Store',
-    storeDescription: 'Exquisite Jewelry',
+    storeName: 'Priyanci Gold',
+    storeDescription: 'Certified gold, honestly priced',
     logoUrl: '',
     faviconUrl: '',
-    primaryColor: '#d4af37',
-    secondaryColor: '#1a1a2e',
-    backgroundColor: '#0f0f1a',
-    textColor: '#ffffff',
+    primaryColor: BRAND.primary,
+    secondaryColor: BRAND.secondary,
+    backgroundColor: BRAND.background,
+    textColor: BRAND.text,
     heroBanners: [],
     contactEmail: '',
     contactPhone: '',
@@ -94,86 +103,59 @@ const ThemeContext = createContext<ThemeContextType>({
     formatPrice: (price) => `₹${price}`,
 });
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-    const [config, setConfig] = useState<StoreConfig>(defaultConfig);
-    const [loading, setLoading] = useState(true);
+export function ThemeProvider({
+    children,
+    initialConfig,
+}: {
+    children: ReactNode;
+    /** Server-fetched config so first paint isn't blocked on client /config */
+    initialConfig?: StoreConfig | null;
+}) {
+    const seeded = initialConfig ? expandConfigMedia(initialConfig) : defaultConfig;
+    const [config, setConfig] = useState<StoreConfig>(seeded);
+    const [loading, setLoading] = useState(!initialConfig);
     const [error, setError] = useState<string | null>(null);
 
-    const applyTheme = (config: StoreConfig) => {
-        if (typeof document !== 'undefined') {
-            const root = document.documentElement;
-            root.style.setProperty('--primary', config.primaryColor);
-            root.style.setProperty('--secondary', config.secondaryColor);
-            root.style.setProperty('--background', config.backgroundColor);
-            root.style.setProperty('--text', config.textColor);
+    const applyTheme = (next: StoreConfig) => {
+        if (typeof document === 'undefined') return;
+        const root = document.documentElement;
+        // Storefront uses the locked brand system (ivory / ink / antique gold).
+        root.style.setProperty('--primary', BRAND.primary);
+        root.style.setProperty('--secondary', BRAND.secondary);
+        root.style.setProperty('--background', BRAND.background);
+        root.style.setProperty('--text', BRAND.text);
+        root.style.setProperty('--antique-gold', BRAND.primary);
+        root.style.setProperty('--antique-gold-text', '#8A5F26');
+        root.style.setProperty('--oxblood', BRAND.oxblood);
+        root.style.setProperty('--emerald', BRAND.emerald);
+        root.style.setProperty('--rose-blush', BRAND.secondary);
+        root.style.setProperty('--bone', BRAND.background);
+        root.style.setProperty('--ink', BRAND.text);
 
-            const faviconToUse = config.faviconUrl || config.logoUrl;
-            if (faviconToUse) {
-                let favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-                if (!favicon) {
-                    favicon = document.createElement('link');
-                    favicon.rel = 'icon';
-                    document.head.appendChild(favicon);
-                }
-                favicon.href = faviconToUse;
-
-                let appleTouchIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
-                if (!appleTouchIcon) {
-                    appleTouchIcon = document.createElement('link');
-                    appleTouchIcon.rel = 'apple-touch-icon';
-                    document.head.appendChild(appleTouchIcon);
-                }
-                appleTouchIcon.href = faviconToUse;
+        const faviconToUse = next.faviconUrl || next.logoUrl;
+        if (faviconToUse) {
+            let favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+            if (!favicon) {
+                favicon = document.createElement('link');
+                favicon.rel = 'icon';
+                document.head.appendChild(favicon);
             }
+            favicon.href = faviconToUse;
 
-            document.title = config.storeName || 'Jewel Store';
-
-            let metaDescription = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-            if (!metaDescription) {
-                metaDescription = document.createElement('meta');
-                metaDescription.name = 'description';
-                document.head.appendChild(metaDescription);
+            let appleTouchIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+            if (!appleTouchIcon) {
+                appleTouchIcon = document.createElement('link');
+                appleTouchIcon.rel = 'apple-touch-icon';
+                document.head.appendChild(appleTouchIcon);
             }
-            metaDescription.content = config.storeDescription || 'Premium jewelry collection';
-
-            const updateOrCreateMeta = (property: string, content: string) => {
-                let meta = document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
-                if (!meta) {
-                    meta = document.createElement('meta');
-                    meta.setAttribute('property', property);
-                    document.head.appendChild(meta);
-                }
-                meta.content = content;
-            };
-
-            updateOrCreateMeta('og:title', config.storeName || 'Jewel Store');
-            updateOrCreateMeta('og:description', config.storeDescription || 'Premium jewelry collection');
-            updateOrCreateMeta('og:site_name', config.storeName || 'Jewel Store');
-            if (config.logoUrl) {
-                updateOrCreateMeta('og:image', config.logoUrl);
-            }
-
-            const updateOrCreateTwitterMeta = (name: string, content: string) => {
-                let meta = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
-                if (!meta) {
-                    meta = document.createElement('meta');
-                    meta.name = name;
-                    document.head.appendChild(meta);
-                }
-                meta.content = content;
-            };
-
-            updateOrCreateTwitterMeta('twitter:title', config.storeName || 'Jewel Store');
-            updateOrCreateTwitterMeta('twitter:description', config.storeDescription || 'Premium jewelry collection');
-            if (config.logoUrl) {
-                updateOrCreateTwitterMeta('twitter:image', config.logoUrl);
-            }
+            appleTouchIcon.href = faviconToUse;
         }
+        // Do not mutate document.title / meta description — Next.js Metadata owns SEO tags.
     };
 
     const fetchConfig = async () => {
         try {
-            setLoading(true);
+            if (!initialConfig) setLoading(true);
             const data = expandConfigMedia(await api.getConfig());
             setConfig(data);
             applyTheme(data);
@@ -181,18 +163,33 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         } catch (err) {
             console.error('Failed to fetch config:', err);
             setError('Failed to load store configuration');
-            applyTheme(defaultConfig);
+            applyTheme(seeded);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchConfig();
+        applyTheme(seeded);
+        if (initialConfig) {
+            setLoading(false);
+            // Soft-revalidate after first paint — don't compete with LCP
+            const run = () => {
+                void fetchConfig();
+            };
+            if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+                const id = window.requestIdleCallback(run, { timeout: 4000 });
+                return () => window.cancelIdleCallback(id);
+            }
+            const t = globalThis.setTimeout(run, 2500);
+            return () => globalThis.clearTimeout(t);
+        }
+        void fetchConfig();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const formatPrice = (price: number) => {
-        return `${config.currencySymbol}${price.toLocaleString()}`;
+        return `${config.currencySymbol}${price.toLocaleString('en-IN')}`;
     };
 
     return (

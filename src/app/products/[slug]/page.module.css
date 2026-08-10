@@ -34,7 +34,8 @@
 }
 
 .mainImage img,
-.mainImage video {
+.mainImage video,
+.mainImageEl {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -63,7 +64,8 @@
     border-color: var(--primary);
 }
 
-.thumbnail img {
+.thumbnail img,
+.thumbImage {
     width: 100%;
     height: 100%;
     object-fit: cover;

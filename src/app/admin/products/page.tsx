@@ -616,8 +616,9 @@ export default function AdminProductsPage() {
                                     />
                                 </div>
                                 <div className={styles.formGroup}>
-                                    <label className="label">Category</label>
+                                    <label htmlFor="product-category" className="label">Category</label>
                                     <select
+                                        id="product-category"
                                         className="input"
                                         value={formData.category}
                                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}

@@ -216,8 +216,9 @@ export default function CheckoutPage() {
                         <h2>Shipping Address</h2>
                         {user?.addresses?.length ? (
                             <div className={styles.formGroup}>
-                                <label className="label">Saved Addresses</label>
+                                <label htmlFor="saved-address" className="label">Saved Addresses</label>
                                 <select
+                                    id="saved-address"
                                     className="input"
                                     value={selectedAddressIndex}
                                     onChange={(e) => applySavedAddress(Number(e.target.value))}

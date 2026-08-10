@@ -67,7 +67,9 @@ export default function AdminOrdersPage() {
         <div className={styles.ordersPage}>
             <div className={styles.header}>
                 <h1>Orders</h1>
+                <label htmlFor="order-status-filter" className="sr-only">Filter by status</label>
                 <select
+                    id="order-status-filter"
                     className="input"
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}

@@ -1,99 +1,164 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
+import { getPublicUrl } from '@/lib/upload';
 import styles from './HeroCarousel.module.css';
 
-export default function HeroCarousel() {
-    const { config } = useTheme();
-    const [currentSlide, setCurrentSlide] = useState(0);
+const FALLBACK_BANNER = '/placeholder-jewelry.jpg';
+const HERO_W = 1600;
+const HERO_H = 900;
 
-    const banners = config?.heroBanners?.length ? config.heroBanners : [
-        'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=1920&q=80',
-        'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=1920&q=80',
-        'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=1920&q=80',
-    ];
+type HeroCarouselProps = {
+  initialBanners?: string[];
+  storeName?: string;
+  storeDescription?: string;
+};
 
-    useEffect(() => {
-        if (banners.length <= 1) return;
+function normalizeBanners(list?: string[]): string[] {
+  const expanded = (list || []).map((b) => getPublicUrl(b)).filter(Boolean);
+  return expanded.length ? expanded : [FALLBACK_BANNER];
+}
 
-        const interval = setInterval(() => {
-            setCurrentSlide((prev) => (prev + 1) % banners.length);
-        }, 5000);
+export default function HeroCarousel({
+  initialBanners,
+  storeName,
+  storeDescription,
+}: HeroCarouselProps) {
+  const { config } = useTheme();
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [hydrated, setHydrated] = useState(false);
 
-        return () => clearInterval(interval);
-    }, [banners.length]);
+  const banners = normalizeBanners(
+    initialBanners?.length
+      ? initialBanners
+      : config?.heroBanners?.length
+        ? config.heroBanners
+        : undefined,
+  );
 
-    const goToSlide = (index: number) => {
-        setCurrentSlide(index);
-    };
+  const brand = storeName || config?.storeName || 'Priyanci Gold';
+  const subtitle =
+    storeDescription ||
+    config?.storeDescription ||
+    'Hallmarked craftsmanship, timeless design, made for everyday elegance.';
 
-    const nextSlide = () => {
-        setCurrentSlide((prev) => (prev + 1) % banners.length);
-    };
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
-    const prevSlide = () => {
-        setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
-    };
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % banners.length);
+    }, 5500);
+    return () => clearInterval(interval);
+  }, [banners.length]);
 
-    return (
-        <section className={styles.hero}>
-            <div className={styles.carousel}>
-                {banners.map((banner, index) => (
-                    <div
-                        key={index}
-                        className={`${styles.slide} ${index === currentSlide ? styles.active : ''}`}
-                        style={{ backgroundImage: `url(${banner})` }}
-                    />
-                ))}
+  const goToSlide = (index: number) => setCurrentSlide(index);
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % banners.length);
+  const prevSlide = () =>
+    setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
 
-                <div className={styles.overlay} />
+  // Only LCP slide before hydration; then current + neighbors (cuts multi-MB carousel waste)
+  const shouldRenderSlide = (index: number) => {
+    if (index === 0) return true;
+    if (!hydrated) return false;
+    if (index === currentSlide) return true;
+    const next = (currentSlide + 1) % banners.length;
+    const prev = (currentSlide - 1 + banners.length) % banners.length;
+    return index === next || index === prev;
+  };
 
-                <div className={styles.content}>
-                    <h1 className={styles.title}>
-                        <span className={styles.titleAccent}>Exquisite</span>
-                        <br />
-                        Jewelry Collection
-                    </h1>
-                    <p className={styles.subtitle}>
-                        Discover timeless elegance crafted with precision and passion.
-                        Each piece tells a unique story.
-                    </p>
-                    <div className={styles.actions}>
-                        <a href="/products" className="btn btn-primary">
-                            Shop Now
-                        </a>
-                        <a href="/products?category=new" className="btn btn-secondary">
-                            New Arrivals
-                        </a>
-                    </div>
-                </div>
-
-                {banners.length > 1 && (
-                    <>
-                        <button className={`${styles.arrow} ${styles.arrowLeft}`} onClick={prevSlide}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="15 18 9 12 15 6"></polyline>
-                            </svg>
-                        </button>
-                        <button className={`${styles.arrow} ${styles.arrowRight}`} onClick={nextSlide}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="9 18 15 12 9 6"></polyline>
-                            </svg>
-                        </button>
-
-                        <div className={styles.dots}>
-                            {banners.map((_, index) => (
-                                <button
-                                    key={index}
-                                    className={`${styles.dot} ${index === currentSlide ? styles.dotActive : ''}`}
-                                    onClick={() => goToSlide(index)}
-                                />
-                            ))}
-                        </div>
-                    </>
-                )}
+  return (
+    <section className={styles.hero} aria-label="Featured collection">
+      <div className={styles.carousel}>
+        {banners.map((banner, index) => {
+          if (!shouldRenderSlide(index)) return null;
+          const isActive = index === currentSlide;
+          const isLcp = index === 0;
+          return (
+            <div
+              key={`${banner}-${index}`}
+              className={`${styles.slide} ${isActive ? styles.active : ''}`}
+              aria-hidden={!isActive}
+            >
+              <Image
+                src={banner}
+                alt={`${brand} jewellery collection${banners.length > 1 ? ` — slide ${index + 1}` : ''}`}
+                width={HERO_W}
+                height={HERO_H}
+                priority={isLcp}
+                fetchPriority={isLcp ? 'high' : 'low'}
+                loading={isLcp ? 'eager' : 'lazy'}
+                sizes="100vw"
+                quality={65}
+                className={styles.slideImage}
+              />
             </div>
-        </section>
-    );
+          );
+        })}
+
+        <div className={styles.overlay} />
+
+        <div className={styles.content}>
+          <p className={styles.brand}>{brand}</p>
+          <h1 className={styles.title}>
+            Certified gold,{' '}
+            <span className={styles.titleAccent}>honestly priced</span>
+          </h1>
+          <p className={styles.subtitle}>{subtitle}</p>
+          <div className={styles.actions}>
+            <Link href="/products" className={`btn btn-primary ${styles.primaryCta}`}>
+              Shop Collection
+            </Link>
+            <Link href="/products" className={`btn btn-secondary ${styles.secondaryCta}`}>
+              View All
+            </Link>
+          </div>
+        </div>
+
+        {banners.length > 1 && (
+          <>
+            <button
+              type="button"
+              className={`${styles.arrow} ${styles.arrowLeft}`}
+              onClick={prevSlide}
+              aria-label="Previous slide"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={`${styles.arrow} ${styles.arrowRight}`}
+              onClick={nextSlide}
+              aria-label="Next slide"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+
+            <div className={styles.dots} role="tablist" aria-label="Carousel slides">
+              {banners.map((_, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  role="tab"
+                  aria-selected={index === currentSlide}
+                  className={`${styles.dot} ${index === currentSlide ? styles.dotActive : ''}`}
+                  onClick={() => goToSlide(index)}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
 }

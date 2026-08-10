@@ -180,7 +180,11 @@ function ProductsContent() {
                         </div>
 
                         {/* Category Filter */}
+                        <label htmlFor="category-filter" className="sr-only">
+                            Filter by category
+                        </label>
                         <select
+                            id="category-filter"
                             value={selectedCategory}
                             onChange={(e) => {
                                 setSelectedCategory(e.target.value);
@@ -197,7 +201,11 @@ function ProductsContent() {
                     </div>
 
                     {/* Sort */}
+                    <label htmlFor="product-sort" className="sr-only">
+                        Sort products
+                    </label>
                     <select
+                        id="product-sort"
                         value={sortBy}
                         onChange={(e) => {
                             setSortBy(e.target.value);

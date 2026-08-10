@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
 import { useCart } from '@/context/CartContext';
@@ -36,6 +37,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         ? Math.round((1 - product.price / product.compareAtPrice) * 100)
         : 0;
     const inStock = product.inventory?.inStock ?? false;
+    const primarySrc = getPublicUrl(product.images?.[0]) || '/placeholder-jewelry.jpg';
+    const hoverSrc =
+        product.hoverImageIndex != null && product.images?.[product.hoverImageIndex]
+            ? getPublicUrl(product.images[product.hoverImageIndex])
+            : null;
 
     const handleAddToCart = async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -58,23 +64,32 @@ export default function ProductCard({ product }: ProductCardProps) {
         ? product.inventory.priceFrom
         : product.price;
 
+    const alt = `${product.title}${product.category ? ` — ${product.category}` : ''} gold jewellery`;
+
     return (
         <Link href={`/products/${product.slug}`} className={styles.card}>
             <div className={styles.imageWrapper}>
-                <div className={`${styles.imageSlider} ${product.hoverImageIndex != null && product.images?.[product.hoverImageIndex] ? styles.hasHoverImage : ''}`}>
-                    <img
-                        src={getPublicUrl(product.images?.[0]) || '/placeholder-jewelry.svg'}
-                        alt={product.title}
-                        className={styles.image}
+                <Image
+                    src={primarySrc}
+                    alt={alt}
+                    width={600}
+                    height={600}
+                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                    quality={70}
+                    className={`${styles.image} ${styles.primaryImage}`}
+                />
+                {hoverSrc && (
+                    <Image
+                        src={hoverSrc}
+                        alt={`${product.title} alternate view — ${product.category || 'gold jewellery'}`}
+                        width={600}
+                        height={600}
+                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                        quality={70}
+                        loading="lazy"
+                        className={`${styles.image} ${styles.hoverImage}`}
                     />
-                    {product.hoverImageIndex != null && product.images?.[product.hoverImageIndex] && (
-                        <img
-                            src={getPublicUrl(product.images[product.hoverImageIndex])}
-                            alt={`${product.title} - alternate view`}
-                            className={styles.image}
-                        />
-                    )}
-                </div>
+                )}
                 {discount > 0 && (
                     <span className={styles.discountBadge}>-{discount}%</span>
                 )}
@@ -83,6 +98,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 )}
                 <div className={styles.overlay}>
                     <button
+                        type="button"
                         className={styles.addBtn}
                         onClick={handleAddToCart}
                         disabled={loading || !inStock}

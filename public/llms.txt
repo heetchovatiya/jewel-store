@@ -1,0 +1,14 @@
+# Priyanci Gold
+
+> BIS hallmarked gold and diamond jewellery retailer, India.
+
+## Docs
+
+- [Homepage](https://www.priyancigold.com): Certified gold jewellery online with transparent pricing
+- [Products](https://www.priyancigold.com/products): Full catalog of gold and diamond jewellery
+- [llms.txt](https://www.priyancigold.com/llms.txt): Machine-readable site summary for AI agents
+
+## Optional
+
+- [About Us](https://www.priyancigold.com/#about-us): Company story and craftsmanship
+- [Contact via site footer](https://www.priyancigold.com): Phone and WhatsApp for product enquiries
