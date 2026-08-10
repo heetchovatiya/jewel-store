@@ -6,6 +6,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
+import { getPublicUrl } from '@/lib/upload';
 import styles from './page.module.css';
 
 declare global {
@@ -360,7 +361,7 @@ export default function CheckoutPage() {
                         <div className={styles.items}>
                             {items.map((item) => (
                                 <div key={item.lineId} className={styles.summaryItem}>
-                                    <img src={item.image || '/placeholder-jewelry.svg'} alt={item.title} />
+                                    <img src={getPublicUrl(item.image) || '/placeholder-jewelry.svg'} alt={item.title} />
                                     <div className={styles.itemInfo}>
                                         <span className={styles.itemName}>{item.title}</span>
                                         <span className={styles.itemQty}>Qty: {item.quantity}</span>

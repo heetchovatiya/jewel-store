@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { getPublicUrl } from '@/lib/upload';
 import styles from './page.module.css';
 
 export default function CartPage() {
@@ -49,7 +50,7 @@ export default function CartPage() {
                         {items.map((item) => (
                             <div key={item.lineId} className={styles.cartItem}>
                                 <div className={styles.itemImage}>
-                                    <img src={item.image || '/placeholder-jewelry.svg'} alt={item.title} />
+                                    <img src={getPublicUrl(item.image) || '/placeholder-jewelry.svg'} alt={item.title} />
                                 </div>
                                 <div className={styles.itemDetails}>
                                     <h3>{item.title}</h3>

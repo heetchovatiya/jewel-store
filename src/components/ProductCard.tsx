@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { getPublicUrl } from '@/lib/upload';
 import styles from './ProductCard.module.css';
 
 interface ProductCardProps {
@@ -62,13 +63,13 @@ export default function ProductCard({ product }: ProductCardProps) {
             <div className={styles.imageWrapper}>
                 <div className={`${styles.imageSlider} ${product.hoverImageIndex != null && product.images?.[product.hoverImageIndex] ? styles.hasHoverImage : ''}`}>
                     <img
-                        src={product.images?.[0] || '/placeholder-jewelry.svg'}
+                        src={getPublicUrl(product.images?.[0]) || '/placeholder-jewelry.svg'}
                         alt={product.title}
                         className={styles.image}
                     />
                     {product.hoverImageIndex != null && product.images?.[product.hoverImageIndex] && (
                         <img
-                            src={product.images[product.hoverImageIndex]}
+                            src={getPublicUrl(product.images[product.hoverImageIndex])}
                             alt={`${product.title} - alternate view`}
                             className={styles.image}
                         />

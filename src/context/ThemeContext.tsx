@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import api from '@/lib/api';
+import { getPublicUrl } from '@/lib/upload';
 
 interface StoreConfig {
     storeName: string;
@@ -65,6 +66,26 @@ const defaultConfig: StoreConfig = {
     currencySymbol: '₹',
 };
 
+/** Expand bare R2 keys → full CDN URLs (API may still return keys if CDN env missing). */
+function expandConfigMedia(raw: StoreConfig): StoreConfig {
+    return {
+        ...raw,
+        logoUrl: getPublicUrl(raw.logoUrl),
+        faviconUrl: getPublicUrl(raw.faviconUrl),
+        heroBanners: (raw.heroBanners || []).map((b) => getPublicUrl(b)),
+        categories: (raw.categories || []).map((c) => ({
+            ...c,
+            image: c.image ? getPublicUrl(c.image) : c.image,
+        })),
+        aboutUs: raw.aboutUs
+            ? {
+                ...raw.aboutUs,
+                images: (raw.aboutUs.images || []).map((img) => getPublicUrl(img)),
+            }
+            : raw.aboutUs,
+    };
+}
+
 const ThemeContext = createContext<ThemeContextType>({
     config: defaultConfig,
     loading: true,
@@ -86,10 +107,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             root.style.setProperty('--background', config.backgroundColor);
             root.style.setProperty('--text', config.textColor);
 
-            // Update favicon - use faviconUrl, or fall back to logoUrl
             const faviconToUse = config.faviconUrl || config.logoUrl;
             if (faviconToUse) {
-                // Update or create the favicon link element
                 let favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
                 if (!favicon) {
                     favicon = document.createElement('link');
@@ -98,7 +117,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
                 }
                 favicon.href = faviconToUse;
 
-                // Also update apple-touch-icon for iOS
                 let appleTouchIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
                 if (!appleTouchIcon) {
                     appleTouchIcon = document.createElement('link');
@@ -108,10 +126,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
                 appleTouchIcon.href = faviconToUse;
             }
 
-            // Update page title
             document.title = config.storeName || 'Jewel Store';
 
-            // Update meta description
             let metaDescription = document.querySelector<HTMLMetaElement>('meta[name="description"]');
             if (!metaDescription) {
                 metaDescription = document.createElement('meta');
@@ -120,7 +136,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             }
             metaDescription.content = config.storeDescription || 'Premium jewelry collection';
 
-            // Update Open Graph meta tags for social sharing
             const updateOrCreateMeta = (property: string, content: string) => {
                 let meta = document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
                 if (!meta) {
@@ -138,7 +153,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
                 updateOrCreateMeta('og:image', config.logoUrl);
             }
 
-            // Update Twitter card meta tags
             const updateOrCreateTwitterMeta = (name: string, content: string) => {
                 let meta = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
                 if (!meta) {
@@ -160,7 +174,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const fetchConfig = async () => {
         try {
             setLoading(true);
-            const data = await api.getConfig();
+            const data = expandConfigMedia(await api.getConfig());
             setConfig(data);
             applyTheme(data);
             setError(null);

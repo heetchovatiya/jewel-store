@@ -9,7 +9,11 @@
  */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const CDN_BASE = (process.env.NEXT_PUBLIC_CDN_URL || '').replace(/\/$/, '');
+/** Fallback keeps storefront working if NEXT_PUBLIC_CDN_URL was missing at build time. */
+const CDN_BASE = (
+    process.env.NEXT_PUBLIC_CDN_URL ||
+    'https://cdn.priyancigold.com'
+).replace(/\/$/, '');
 
 /** Hard cap — stay under R2 multipart thresholds (~200MB); app uses 20MB. */
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
@@ -40,14 +44,17 @@ function authHeaders(): HeadersInit {
     };
 }
 
-/** Build a public CDN URL from a storage key (or pass through full URLs). */
+/**
+ * Build a public CDN URL from a storage key (or pass through absolute URLs).
+ * Handles bare keys ("logos/x.webp") and accidental site-relative paths ("/logos/x.webp").
+ */
 export function getPublicUrl(keyOrUrl: string | null | undefined): string {
     if (!keyOrUrl) return '';
     const trimmed = keyOrUrl.trim();
     if (!trimmed) return '';
-    if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('/')) return trimmed;
-    if (!CDN_BASE) return trimmed;
-    return `${CDN_BASE}/${trimmed.replace(/^\//, '')}`;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    const key = trimmed.replace(/^\//, '');
+    return `${CDN_BASE}/${key}`;
 }
 
 /**
