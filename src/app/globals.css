@@ -30,6 +30,7 @@
   --secondary: var(--rose-blush);
   --background: var(--bone);
   --text: var(--ink);
+  --text-primary: var(--ink);
   --text-muted: color-mix(in srgb, var(--ink) 58%, transparent);
   --text-secondary: color-mix(in srgb, var(--ink) 72%, transparent);
 

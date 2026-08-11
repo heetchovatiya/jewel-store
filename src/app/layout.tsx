@@ -22,14 +22,13 @@ const fraunces = Fraunces({
   subsets: ['latin'],
   variable: '--font-voice',
   display: 'swap',
-  weight: ['400', '500', '600'],
+  style: ['normal', 'italic'],
 });
 
 const publicSans = Public_Sans({
   subsets: ['latin'],
   variable: '--font-sans',
   display: 'swap',
-  weight: ['400', '500', '600'],
 });
 
 const plexMono = IBM_Plex_Mono({
@@ -37,7 +36,7 @@ const plexMono = IBM_Plex_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   display: 'swap',
-  preload: false, // not needed for first paint / LCP
+  preload: false,
 });
 
 export const metadata: Metadata = {
