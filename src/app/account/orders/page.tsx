@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import { getPublicUrl } from '@/lib/upload';
+import ShipmentTracking from '@/components/ShipmentTracking';
+import type { OrderShipment } from '@/types/commerce';
 import styles from './orders.module.css';
 
 interface OrderItem {
@@ -31,6 +33,7 @@ interface Order {
         pincode: string;
     };
     createdAt: string;
+    shipment?: OrderShipment;
 }
 
 const statusColors: Record<string, string> = {
@@ -213,6 +216,13 @@ export default function OrdersPage() {
                                                 </div>
                                             ))}
                                         </div>
+
+                                        {order.shipment?.awbNo && order.shipment.status !== 'cancelled' && (
+                                            <div className={styles.shippingInfo}>
+                                                <h3>Tracking</h3>
+                                                <ShipmentTracking orderId={order._id} />
+                                            </div>
+                                        )}
 
                                         <div className={styles.shippingInfo}>
                                             <h3>Shipping Address</h3>

@@ -310,3 +310,36 @@
         font-size: 1.1rem;
     }
 }
+/* Guest-cart notices (items removed / quantity reduced) */
+.notice {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-md, 16px);
+    padding: var(--space-sm, 12px) var(--space-md, 16px);
+    margin-bottom: var(--space-lg, 24px);
+    border: 1px solid var(--error);
+    border-radius: 8px;
+    color: var(--error);
+}
+
+.notice ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.notice button {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.25rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.guestHint {
+    margin-top: var(--space-sm, 12px);
+    font-size: 0.85rem;
+    opacity: 0.75;
+    text-align: center;
+}

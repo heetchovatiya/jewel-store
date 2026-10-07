@@ -135,6 +135,22 @@ class ApiClient {
         });
     }
 
+    /** Price a browser-held guest cart (no login needed, nothing saved). */
+    async previewGuestCart(items: import('@/types/commerce').GuestCartLine[]) {
+        return this.request<import('@/types/commerce').CartResponse>('/cart/preview', {
+            method: 'POST',
+            body: { items },
+        });
+    }
+
+    /** Merge the guest cart into the logged-in user's cart. */
+    async mergeGuestCart(items: import('@/types/commerce').GuestCartLine[]) {
+        return this.request<import('@/types/commerce').CartResponse>('/cart/merge', {
+            method: 'POST',
+            body: { items },
+        });
+    }
+
     async updateCartItem(lineId: string, quantity: number) {
         return this.request<import('@/types/commerce').CartResponse>(`/cart/items/line/${lineId}`, {
             method: 'PATCH',
@@ -202,6 +218,53 @@ class ApiClient {
 
     async getOrder(id: string) {
         return this.request<any>(`/orders/${id}`);
+    }
+
+    // Shipping (Blue Dart)
+    async checkServiceability(pincode: string) {
+        return this.request<import('@/types/commerce').PincodeServiceability>(
+            `/shipping/serviceability?pincode=${encodeURIComponent(pincode)}`,
+        );
+    }
+
+    async getOrderTracking(orderId: string) {
+        return this.request<import('@/types/commerce').OrderTrackingResponse>(`/shipping/orders/${orderId}/tracking`);
+    }
+
+    async getShippingStatus() {
+        return this.request<{ carrier: string; mock: boolean; serviceability: boolean; waybill: boolean; tracking: boolean }>(
+            '/admin/shipping/status',
+        );
+    }
+
+    async createWaybill(orderId: string, body: { weightKg?: number; pieces?: number; pickupDate?: string; registerPickup?: boolean }) {
+        return this.request<any>(`/admin/shipping/orders/${orderId}/waybill`, { method: 'POST', body });
+    }
+
+    async cancelWaybill(orderId: string) {
+        return this.request<any>(`/admin/shipping/orders/${orderId}/waybill/cancel`, { method: 'POST' });
+    }
+
+    async getAdminOrderTracking(orderId: string) {
+        return this.request<import('@/types/commerce').OrderTrackingResponse>(`/admin/shipping/orders/${orderId}/tracking`);
+    }
+
+    /** Downloads the Blue Dart label PDF (needs the auth header, so not a plain link). */
+    async downloadShippingLabel(orderId: string): Promise<{ blob: Blob; filename: string }> {
+        const token = this.getToken();
+        const response = await fetch(`${API_BASE}/admin/shipping/orders/${orderId}/label`, {
+            headers: {
+                'x-tenant-id': this.tenantId,
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: 'Label not available' }));
+            throw new ApiError(error.message || 'Label not available', response.status);
+        }
+        const disposition = response.headers.get('content-disposition') || '';
+        const filename = /filename="?([^"]+)"?/.exec(disposition)?.[1] || `label-${orderId}.pdf`;
+        return { blob: await response.blob(), filename };
     }
 
     // User
@@ -284,6 +347,26 @@ class ApiClient {
 
     async updateLead(id: string, data: any) {
         return this.request<any>(`/admin/leads/${id}`, { method: 'PATCH', body: data });
+    }
+
+    // Admin: users & roles
+    async getAdminUsers(params: { search?: string; role?: string; page?: number; limit?: number } = {}) {
+        const q = new URLSearchParams();
+        if (params.search) q.set('search', params.search);
+        if (params.role) q.set('role', params.role);
+        if (params.page) q.set('page', String(params.page));
+        if (params.limit) q.set('limit', String(params.limit));
+        const qs = q.toString();
+        return this.request<{ users: import('@/types/commerce').AdminUser[]; total: number; page: number; limit: number }>(
+            `/admin/users${qs ? `?${qs}` : ''}`,
+        );
+    }
+
+    async updateUserRole(userId: string, role: import('@/types/commerce').UserRole) {
+        return this.request<import('@/types/commerce').AdminUser>(`/admin/users/${userId}/role`, {
+            method: 'PATCH',
+            body: { role },
+        });
     }
 
     async getInventory() {

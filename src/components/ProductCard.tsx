@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
 import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
 import { getPublicUrl } from '@/lib/upload';
 import styles from './ProductCard.module.css';
 
@@ -31,7 +30,6 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
     const { formatPrice } = useTheme();
     const { addToCart, loading } = useCart();
-    const { isAuthenticated } = useAuth();
 
     const discount = product.compareAtPrice
         ? Math.round((1 - product.price / product.compareAtPrice) * 100)
@@ -47,17 +45,16 @@ export default function ProductCard({ product }: ProductCardProps) {
         e.preventDefault();
         e.stopPropagation();
 
-        if (!isAuthenticated) {
-            window.location.href = '/login';
-            return;
-        }
-
         if (!inStock) return;
         if (product.hasVariants) {
             window.location.href = `/products/${product.slug}`;
             return;
         }
-        await addToCart(product._id, 1);
+        try {
+            await addToCart(product._id, 1);
+        } catch (err) {
+            console.error('Add to cart failed:', err);
+        }
     };
 
     const displayPrice = product.hasVariants && product.inventory?.priceFrom != null

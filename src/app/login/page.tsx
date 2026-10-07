@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { getSafeRedirect, withRedirect } from '@/lib/redirect';
 import styles from './page.module.css';
 
 export default function LoginPage() {
@@ -21,7 +22,8 @@ export default function LoginPage() {
 
         try {
             await login(identifier, password);
-            router.push('/');
+            // e.g. back to /checkout when they came from "Login to Checkout"
+            router.push(getSafeRedirect('/'));
         } catch (err: any) {
             setError(err.message || 'Invalid credentials');
         } finally {
@@ -72,7 +74,7 @@ export default function LoginPage() {
                 <div className={styles.footer}>
                     <p>
                         Don't have an account?{' '}
-                        <Link href="/register">Create one</Link>
+                        <Link href="/register" onClick={(e) => { e.preventDefault(); router.push(withRedirect('/register')); }}>Create one</Link>
                     </p>
                 </div>
             </div>

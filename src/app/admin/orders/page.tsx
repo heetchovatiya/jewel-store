@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
+import BluedartShipmentPanel from '@/components/admin/BluedartShipmentPanel';
 import styles from './page.module.css';
 
 const ORDER_STATUSES = ['payment_pending', 'payment_failed', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -18,6 +19,7 @@ export default function AdminOrdersPage() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('');
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
+    const [shippingCaps, setShippingCaps] = useState<{ mock: boolean; waybill: boolean; tracking: boolean } | null>(null);
 
     useEffect(() => {
         if (!authLoading && !isAdmin) {
@@ -30,6 +32,19 @@ export default function AdminOrdersPage() {
             fetchOrders();
         }
     }, [isAdmin, filter]);
+
+    useEffect(() => {
+        if (isAdmin) {
+            api.getShippingStatus().then(setShippingCaps).catch(() => setShippingCaps(null));
+        }
+    }, [isAdmin]);
+
+    // After a waybill is created/cancelled, refresh both the modal and the list row
+    const handleShipmentChanged = (updated: any) => {
+        if (!updated) return;
+        setSelectedOrder(updated);
+        setOrders((prev) => prev.map((o) => (o._id === updated._id ? { ...o, ...updated } : o)));
+    };
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -106,6 +121,11 @@ export default function AdminOrdersPage() {
                                 <span className={`badge badge-${order.status === 'payment_failed' || order.status === 'cancelled' ? 'error' : order.status === 'payment_pending' || order.status === 'pending' ? 'warning' : order.status === 'delivered' ? 'success' : 'primary'}`}>
                                     {order.status}
                                 </span>
+                                {order.shipment?.awbNo && order.shipment.status !== 'cancelled' && (
+                                    <small style={{ display: 'block', marginTop: 4, opacity: 0.75, fontFamily: 'monospace' }}>
+                                        AWB {order.shipment.awbNo}
+                                    </small>
+                                )}
                             </span>
                             <span>
                                 <button
@@ -162,6 +182,14 @@ export default function AdminOrdersPage() {
                                     <span>Total</span>
                                     <span>{formatPrice(selectedOrder.total)}</span>
                                 </div>
+                            </div>
+
+                            <div className={styles.detailSection}>
+                                <BluedartShipmentPanel
+                                    order={selectedOrder}
+                                    capabilities={shippingCaps}
+                                    onChanged={handleShipmentChanged}
+                                />
                             </div>
 
                             <div className={styles.detailSection}>

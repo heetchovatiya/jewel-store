@@ -1,0 +1,75 @@
+.panel {
+    display: grid;
+    gap: 12px;
+}
+
+.panel h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mock {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--error);
+    color: var(--error);
+}
+
+.form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    align-items: end;
+}
+
+.form label {
+    display: grid;
+    gap: 4px;
+    font-size: 0.85rem;
+}
+
+.form .check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 12px;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.facts dt {
+    opacity: 0.7;
+}
+
+.facts dd {
+    margin: 0;
+}
+
+.mono {
+    font-family: monospace;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.muted {
+    margin: 0;
+    font-size: 0.85rem;
+    opacity: 0.75;
+}
+
+.error {
+    margin: 0;
+    color: var(--error);
+    font-size: 0.9rem;
+}

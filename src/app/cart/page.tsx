@@ -12,15 +12,17 @@ import styles from './page.module.css';
 export default function CartPage() {
     const router = useRouter();
     const { formatPrice } = useTheme();
-    const { items, total, loading, updateQuantity, removeItem } = useCart();
+    const { items, total, loading, ready, notices, dismissNotices, updateQuantity, removeItem } = useCart();
     const { isAuthenticated } = useAuth();
 
-    if (!isAuthenticated) {
+    // Guests can build a cart; we only ask them to log in when they check out.
+    // After login they come straight back to /checkout and the cart is merged.
+    const checkoutHref = isAuthenticated ? '/checkout' : '/login?redirect=%2Fcheckout';
+
+    if (!ready && items.length === 0) {
         return (
             <div className={styles.empty}>
-                <h2>Please Login</h2>
-                <p>You need to be logged in to view your cart</p>
-                <Link href="/login" className="btn btn-primary">Login</Link>
+                <div className="spinner" />
             </div>
         );
     }
@@ -44,6 +46,15 @@ export default function CartPage() {
         <div className={styles.cartPage}>
             <div className="container">
                 <h1 className={styles.title}>Shopping Cart</h1>
+
+                {notices.length > 0 && (
+                    <div className={styles.notice} role="status">
+                        <ul>
+                            {notices.map((n) => <li key={n}>{n}</li>)}
+                        </ul>
+                        <button type="button" onClick={dismissNotices} aria-label="Dismiss">×</button>
+                    </div>
+                )}
 
                 <div className={styles.cartLayout}>
                     <div className={styles.cartItems}>
@@ -107,9 +118,12 @@ export default function CartPage() {
                             <span>Total</span>
                             <span>{formatPrice(total)}</span>
                         </div>
-                        <Link href="/checkout" className="btn btn-primary" style={{ width: '100%' }}>
-                            Proceed to Checkout
+                        <Link href={checkoutHref} className="btn btn-primary" style={{ width: '100%' }}>
+                            {isAuthenticated ? 'Proceed to Checkout' : 'Login to Checkout'}
                         </Link>
+                        {!isAuthenticated && (
+                            <p className={styles.guestHint}>Your cart is saved and will be kept after you log in.</p>
+                        )}
                         <Link href="/products" className={styles.continueLink}>
                             Continue Shopping
                         </Link>

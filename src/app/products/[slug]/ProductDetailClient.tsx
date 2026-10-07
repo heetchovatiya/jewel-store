@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
+import DeliveryCheck from '@/components/DeliveryCheck';
 import api from '@/lib/api';
 import { getPublicUrl, isVideoUrl } from '@/lib/upload';
 import {
@@ -29,7 +29,6 @@ export default function ProductDetailClient({
     const slug = params.slug as string;
     const { formatPrice } = useTheme();
     const { addToCart, loading: cartLoading } = useCart();
-    const { isAuthenticated } = useAuth();
 
     const [product, setProduct] = useState<any>(initialProduct);
     const [loading, setLoading] = useState(!initialProduct);
@@ -40,6 +39,7 @@ export default function ProductDetailClient({
     const [showLeadModal, setShowLeadModal] = useState(false);
     const [leadForm, setLeadForm] = useState({ name: '', phone: '' });
     const [leadSubmitted, setLeadSubmitted] = useState(false);
+    const [cartMessage, setCartMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     useEffect(() => {
         // Prefer SSR payload; refetch only when slug changes away from it
@@ -67,17 +67,20 @@ export default function ProductDetailClient({
         }
     };
 
+    // Guests can add to cart too; login is only asked for at checkout.
     const handleAddToCart = async () => {
-        if (!isAuthenticated) {
-            window.location.href = '/login';
-            return;
-        }
         if (!product) return;
         const variant = product.hasVariants
             ? findVariant(product, selectedSize || undefined, selectedColor || undefined)
             : null;
         if (product.hasVariants && !variant) return;
-        await addToCart(product._id, quantity, variant?._id);
+        setCartMessage(null);
+        try {
+            await addToCart(product._id, quantity, variant?._id);
+            setCartMessage({ type: 'success', text: 'Added to cart' });
+        } catch (err) {
+            setCartMessage({ type: 'error', text: err instanceof Error ? err.message : 'Could not add to cart' });
+        }
     };
 
     const handleLeadSubmit = async (e: React.FormEvent) => {
@@ -346,6 +349,23 @@ export default function ProductDetailClient({
                                             : 'Add to Cart'}
                             </button>
                         </div>
+                        {cartMessage && (
+                            <p
+                                role="status"
+                                style={{
+                                    marginTop: 'var(--space-sm)',
+                                    color: cartMessage.type === 'error' ? 'var(--error)' : 'var(--success, #2e7d32)',
+                                }}
+                            >
+                                {cartMessage.text}
+                                {cartMessage.type === 'success' && (
+                                    <> · <a href="/cart" style={{ textDecoration: 'underline' }}>View cart</a></>
+                                )}
+                            </p>
+                        )}
+
+                        {/* Blue Dart delivery / COD check */}
+                        <DeliveryCheck />
 
                         {/* Inquiry Button */}
                         <button

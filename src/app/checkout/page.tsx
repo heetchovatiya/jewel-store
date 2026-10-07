@@ -7,6 +7,8 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import { getPublicUrl } from '@/lib/upload';
+import { checkDelivery, formatEta, savePincode } from '@/lib/delivery';
+import type { PincodeServiceability } from '@/types/commerce';
 import styles from './page.module.css';
 
 declare global {
@@ -18,8 +20,8 @@ declare global {
 export default function CheckoutPage() {
     const router = useRouter();
     const { formatPrice } = useTheme();
-    const { items, total, clearCart } = useCart();
-    const { user, isAuthenticated } = useAuth();
+    const { items, total, clearCart, ready: cartReady } = useCart();
+    const { user, isAuthenticated, loading: authLoading } = useAuth();
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -27,6 +29,10 @@ export default function CheckoutPage() {
     const [pincodeLoading, setPincodeLoading] = useState(false);
     const [pincodeError, setPincodeError] = useState('');
     const lastPincodeLookupRef = useRef('');
+    const prefilledRef = useRef(false);
+    const placingOrderRef = useRef(false);
+    const [delivery, setDelivery] = useState<PincodeServiceability | null>(null);
+    const [deliveryLoading, setDeliveryLoading] = useState(false);
 
     const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod'>('online');
 
@@ -40,16 +46,23 @@ export default function CheckoutPage() {
         pincode: '',
     });
 
+    // Login is required only here. Wait until auth + cart (incl. guest-cart merge) are loaded.
     useEffect(() => {
+        if (authLoading) return;
         if (!isAuthenticated) {
-            router.push('/login');
+            router.replace('/login?redirect=%2Fcheckout');
             return;
         }
-        if (items.length === 0) {
+        if (cartReady && items.length === 0 && !placingOrderRef.current) {
             router.push('/cart');
         }
-        // Pre-fill with first saved address (or default when available)
-        if (user?.addresses?.length) {
+    }, [authLoading, isAuthenticated, cartReady, items.length, router]);
+
+    // Pre-fill with the default saved address once (don't overwrite what the user types)
+    useEffect(() => {
+        if (!user || prefilledRef.current) return;
+        prefilledRef.current = true;
+        if (user.addresses?.length) {
             const defaultAddr = user.addresses.find((a: any) => a.isDefault) || user.addresses[0];
             const index = user.addresses.findIndex((a: any) => a === defaultAddr);
             setSelectedAddressIndex(index >= 0 ? index : 0);
@@ -65,11 +78,42 @@ export default function CheckoutPage() {
         } else {
             setAddress((prev) => ({
                 ...prev,
-                fullName: user?.name || prev.fullName,
-                phone: user?.phone || prev.phone,
+                fullName: user.name || prev.fullName,
+                phone: user.phone || prev.phone,
             }));
         }
-    }, [isAuthenticated, items, user, router]);
+    }, [user]);
+
+    // Blue Dart delivery check whenever a full PIN code is present
+    useEffect(() => {
+        const pin = address.pincode;
+        if (!/^\d{6}$/.test(pin)) {
+            setDelivery(null);
+            return;
+        }
+        let cancelled = false;
+        setDeliveryLoading(true);
+        checkDelivery(pin)
+            .then((r) => {
+                if (cancelled) return;
+                setDelivery(r);
+                savePincode(pin);
+                if (r.checked && !r.codAvailable) setPaymentMethod('online');
+            })
+            .catch(() => {
+                if (!cancelled) setDelivery(null); // server re-checks when the order is placed
+            })
+            .finally(() => {
+                if (!cancelled) setDeliveryLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [address.pincode]);
+
+    const notDeliverable = !!delivery && delivery.checked && !delivery.serviceable;
+    const codBlocked = !!delivery && delivery.checked && !delivery.codAvailable;
+    const eta = formatEta(delivery?.estimatedDeliveryDate);
 
     const applySavedAddress = (index: number) => {
         if (!user?.addresses?.[index]) return;
@@ -137,6 +181,7 @@ export default function CheckoutPage() {
     };
 
     const handleCodOrder = async () => {
+        placingOrderRef.current = true;
         const order = await api.placeCodOrder(address);
         await clearCart();
         router.push('/account/orders');
@@ -163,6 +208,7 @@ export default function CheckoutPage() {
                         razorpaySignature: response.razorpay_signature,
                     });
 
+                    placingOrderRef.current = true;
                     await clearCart();
                     router.push('/account/orders');
                 } catch (verifyError: any) {
@@ -190,6 +236,14 @@ export default function CheckoutPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        if (notDeliverable) {
+            setError(`Sorry, we can't deliver to PIN code ${address.pincode} yet. Please use a different address.`);
+            return;
+        }
+        if (paymentMethod === 'cod' && codBlocked) {
+            setError('Cash on Delivery is not available for this PIN code. Please pay online.');
+            return;
+        }
         setLoading(true);
 
         try {
@@ -199,6 +253,7 @@ export default function CheckoutPage() {
                 await handleOnlinePayment();
             }
         } catch (err: any) {
+            placingOrderRef.current = false;
             setError(err.message || 'Failed to place order');
             setLoading(false);
         }
@@ -315,6 +370,15 @@ export default function CheckoutPage() {
                                 />
                                 {pincodeLoading ? <small>Fetching city/state from PIN code...</small> : null}
                                 {pincodeError ? <small style={{ color: 'var(--error)' }}>{pincodeError}</small> : null}
+                                {deliveryLoading ? <small>Checking Blue Dart delivery…</small> : null}
+                                {!deliveryLoading && notDeliverable ? (
+                                    <small style={{ color: 'var(--error)' }}>Sorry, we don&apos;t deliver to this PIN code yet.</small>
+                                ) : null}
+                                {!deliveryLoading && delivery?.checked && delivery.serviceable ? (
+                                    <small style={{ color: 'var(--success)' }}>
+                                        ✓ Delivers via Blue Dart{eta ? ` by ${eta}` : ''}
+                                    </small>
+                                ) : null}
                             </div>
                         </div>
 
@@ -334,23 +398,29 @@ export default function CheckoutPage() {
                                         <span className={styles.paymentHint}>UPI, cards, net banking via Razorpay</span>
                                     </div>
                                 </label>
-                                <label className={`${styles.paymentOption} ${paymentMethod === 'cod' ? styles.paymentOptionActive : ''}`}>
+                                <label
+                                    className={`${styles.paymentOption} ${paymentMethod === 'cod' ? styles.paymentOptionActive : ''}`}
+                                    style={codBlocked ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+                                >
                                     <input
                                         type="radio"
                                         name="paymentMethod"
                                         value="cod"
                                         checked={paymentMethod === 'cod'}
+                                        disabled={codBlocked}
                                         onChange={() => setPaymentMethod('cod')}
                                     />
                                     <div>
                                         <span className={styles.paymentLabel}>Cash on Delivery</span>
-                                        <span className={styles.paymentHint}>Pay when your order arrives</span>
+                                        <span className={styles.paymentHint}>
+                                            {codBlocked ? 'Not available for this PIN code' : 'Pay when your order arrives'}
+                                        </span>
                                     </div>
                                 </label>
                             </div>
                         </div>
 
-                        <button type="submit" className="btn btn-primary" disabled={loading}>
+                        <button type="submit" className="btn btn-primary" disabled={loading || notDeliverable}>
                             {loading
                                 ? paymentMethod === 'cod' ? 'Placing Order...' : 'Starting Payment...'
                                 : paymentMethod === 'cod' ? 'Place Order' : 'Pay Securely'}
@@ -377,7 +447,7 @@ export default function CheckoutPage() {
                                 <span>{formatPrice(total)}</span>
                             </div>
                             <div className={styles.totalRow}>
-                                <span>Shipping</span>
+                                <span>Shipping{eta ? ` (Blue Dart, by ${eta})` : ''}</span>
                                 <span className={styles.free}>Free</span>
                             </div>
                             <div className={`${styles.totalRow} ${styles.grandTotal}`}>

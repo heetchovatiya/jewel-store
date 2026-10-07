@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { getSafeRedirect, withRedirect } from '@/lib/redirect';
 import styles from '../login/page.module.css';
 
 export default function RegisterPage() {
@@ -40,7 +41,8 @@ export default function RegisterPage() {
         setLoading(true);
         try {
             await register(email, password, name, phone);
-            router.push('/');
+            // e.g. back to /checkout when they came from "Login to Checkout"
+            router.push(getSafeRedirect('/'));
         } catch (err: any) {
             setError(err.message || 'Registration failed');
         } finally {
@@ -127,7 +129,7 @@ export default function RegisterPage() {
                 <div className={styles.footer}>
                     <p>
                         Already have an account?{' '}
-                        <Link href="/login">Sign in</Link>
+                        <Link href="/login" onClick={(e) => { e.preventDefault(); router.push(withRedirect("/login")); }}>Sign in</Link>
                     </p>
                 </div>
             </div>

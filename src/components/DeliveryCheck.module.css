@@ -1,0 +1,46 @@
+.box {
+    margin-top: var(--space-md, 16px);
+    padding: var(--space-md, 16px);
+    border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+    border-radius: 8px;
+}
+
+.title {
+    margin: 0 0 var(--space-sm, 10px);
+    font-size: 0.95rem;
+}
+
+.row {
+    display: flex;
+    gap: var(--space-sm, 10px);
+}
+
+.row input {
+    flex: 1;
+    min-width: 0;
+}
+
+.list {
+    list-style: none;
+    margin: var(--space-sm, 10px) 0 0;
+    padding: 0;
+    display: grid;
+    gap: 4px;
+    font-size: 0.9rem;
+}
+
+.good {
+    color: var(--success);
+}
+
+.bad {
+    margin: var(--space-sm, 10px) 0 0;
+    color: var(--error);
+    font-size: 0.9rem;
+}
+
+.muted {
+    margin: var(--space-sm, 10px) 0 0;
+    opacity: 0.75;
+    font-size: 0.9rem;
+}
